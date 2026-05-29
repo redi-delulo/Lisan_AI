@@ -47,8 +47,26 @@ function getErrorStatus(error: unknown): number | undefined {
 }
 
 function getGroqErrorCode(error: unknown): string | undefined {
-  if (typeof error === 'object' && error !== null && 'error' in error) {
+  if (typeof error !== 'object' || error === null) {
+    return undefined
+  }
+
+  if ('code' in error) {
+    const code = (error as { code?: unknown }).code
+    if (typeof code === 'string') {
+      return code
+    }
+  }
+
+  if ('error' in error) {
     const errorBody = (error as { error?: unknown }).error
+
+    if (typeof errorBody === 'object' && errorBody !== null && 'code' in errorBody) {
+      const code = (errorBody as { code?: unknown }).code
+      if (typeof code === 'string') {
+        return code
+      }
+    }
 
     if (typeof errorBody === 'object' && errorBody !== null && 'error' in errorBody) {
       const nestedError = (errorBody as { error?: unknown }).error
@@ -61,6 +79,13 @@ function getGroqErrorCode(error: unknown): string | undefined {
   }
 
   return undefined
+}
+
+function isGroqConfigurationError(error: unknown): boolean {
+  const status = getErrorStatus(error)
+  const code = getGroqErrorCode(error)
+
+  return status === 401 || status === 403 || status === 404 || code === 'model_decommissioned'
 }
 
 function getPublicErrorMessage(error: unknown, fallbackMessage: string): string {
@@ -89,6 +114,16 @@ function createDefaultAIResponse(input: string, skillLevel: SkillLevel): string 
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      ok: true,
+      groqConfigured: Boolean(groq),
+      model: groqModel,
+      requestedModel: requestedGroqModel,
+      modelRemapped: requestedGroqModel !== groqModel,
+    })
+  }
+
   if (req.method === 'POST') {
     if (!groq) {
       return res.status(500).json({ error: 'Server is missing GROQ_API_KEY configuration' })
@@ -130,28 +165,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Invalid action' })
     }
   } else {
-    res.setHeader('Allow', ['POST'])
+    res.setHeader('Allow', ['GET', 'POST'])
     res.status(405).end(`Method ${req.method} Not Allowed`)
   }
 }
 
 async function generateAIResponse(input: string, skillLevel: SkillLevel): Promise<string> {
-  const prompt = `You are a helpful language tutor assisting a ${skillLevel} level student. 
-  Respond to the following input in a way that's appropriate for their skill level: "${input}"`
-
   try {
     const completion = await getGroqClient().chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        {
+          role: 'system',
+          content: `You are Lisan AI, a friendly English language tutor for a ${skillLevel} learner. Give a direct, helpful answer in 2-4 short sentences. Correct mistakes gently and ask one follow-up practice question.`,
+        },
+        { role: 'user', content: input },
+      ],
       model: groqModel,
       temperature: 0.7,
-      max_tokens: 150,
+      max_tokens: 220,
     })
 
-    return completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response."
+    const message = completion.choices[0]?.message?.content?.trim()
+    return message || createDefaultAIResponse(input, skillLevel)
   } catch (error) {
-    const status = getErrorStatus(error)
-
-    if (status === 401 || status === 403 || status === 404) {
+    if (isGroqConfigurationError(error)) {
       console.error('Configuration error calling Groq API:', error)
       throw error
     }
@@ -211,6 +248,9 @@ async function generateWordExercises(skillLevel: SkillLevel, count: number = 5):
     }
   } catch (error) {
     console.error('Error generating word exercises:', error)
+    if (isGroqConfigurationError(error)) {
+      throw error
+    }
     throw new Error('Failed to generate word exercises')
   }
 }
@@ -268,6 +308,9 @@ async function generateGrammarExercise(skillLevel: SkillLevel): Promise<GrammarE
     }
   } catch (error) {
     console.error('Error generating grammar exercise:', error)
+    if (isGroqConfigurationError(error)) {
+      throw error
+    }
     // Return a level-specific default exercise if generation fails
     return createDefaultExercise(skillLevel)
   }

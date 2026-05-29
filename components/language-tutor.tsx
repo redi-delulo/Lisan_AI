@@ -66,6 +66,7 @@ export function LanguageTutorComponent() {
   const [userInput, setUserInput] = useState<string>("")
   const [progress, setProgress] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
+  const [isSendingMessage, setIsSendingMessage] = useState(false)
   const conversationEndRef = useRef<HTMLDivElement>(null)
   const [currentGrammarExercise, setCurrentGrammarExercise] = useState<GrammarExercise | null>(null)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
@@ -139,7 +140,15 @@ export function LanguageTutorComponent() {
   const handleConversationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmedInput = userInput.trim()
-    if (!trimmedInput) return
+    if (!trimmedInput || isSendingMessage) return
+
+    setError(null)
+    setIsSendingMessage(true)
+    setUserInput("")
+    setConversation((entries) => [
+      ...entries,
+      { speaker: "User", message: trimmedInput },
+    ])
 
     setError(null)
     try {
@@ -148,20 +157,20 @@ export function LanguageTutorComponent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "conversation", userInput: trimmedInput, skillLevel }),
       })
-      const data = await response.json()
-      if (response.ok) {
+      const data = await response.json().catch(() => ({ error: "Invalid API response" }))
+      if (response.ok && typeof data.message === "string") {
         setConversation((entries) => [
           ...entries,
-          { speaker: "User", message: trimmedInput },
           { speaker: "AI", message: data.message },
         ])
-        setUserInput("")
         updateProgress()
       } else {
         setError(data.error || "Failed to get AI response")
       }
     } catch {
       setError("Failed to get AI response")
+    } finally {
+      setIsSendingMessage(false)
     }
   }
 
@@ -431,6 +440,14 @@ export function LanguageTutorComponent() {
                 </div>
               </div>
             ))}
+            {isSendingMessage && (
+              <div className="mb-3 flex justify-start">
+                <div className="rounded-3xl bg-white px-4 py-3 text-sm text-[#081735]">
+                  <p className="mb-1 text-xs font-bold opacity-70">Lisan AI</p>
+                  Generating your answer...
+                </div>
+              </div>
+            )}
             <div ref={conversationEndRef} />
           </div>
           <form onSubmit={handleConversationSubmit} className="flex gap-2">
@@ -439,10 +456,11 @@ export function LanguageTutorComponent() {
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               placeholder="Type your message..."
+              disabled={isSendingMessage}
               className="h-12 flex-grow rounded-2xl border-white/10 bg-white text-[#081735]"
             />
-            <Button type="submit" className="h-12 rounded-2xl bg-[#19b86d] px-4 text-white hover:bg-[#139c5d]">
-              <Send className="h-5 w-5" />
+            <Button type="submit" disabled={isSendingMessage || !userInput.trim()} className="h-12 rounded-2xl bg-[#19b86d] px-4 text-white hover:bg-[#139c5d]">
+              {isSendingMessage ? "..." : <Send className="h-5 w-5" />}
             </Button>
           </form>
         </section>

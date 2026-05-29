@@ -57,6 +57,12 @@ To set up the project locally, follow these steps:
 
    If your Vercel deployment still has `GROQ_MODEL=mixtral-8x7b-32768`, update it to `llama-3.3-70b-versatile` or delete the variable so the app can use the default model, then redeploy.
 
+   To verify a Vercel deployment is wired to the server-side Groq key, open this endpoint after redeploying:
+   ```bash
+   curl https://your-vercel-domain.vercel.app/api/language-tutor
+   ```
+   The response should include `"groqConfigured":true` and the active model. It never returns the secret API key.
+
 4. Run the development server:
    ```bash
    npm run dev
