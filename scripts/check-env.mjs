@@ -7,12 +7,14 @@ const requiredVariables = [
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
+  'NEXT_PUBLIC_APP_URL',
 ]
 const placeholderValues = new Set([
   'your_gemini_api_key_here',
   'https://your-project.supabase.co',
   'your_supabase_anon_key_here',
   'your_supabase_service_role_key_here',
+  'https://your-vercel-domain.vercel.app',
 ])
 function parseEnvFile(path) {
   if (!existsSync(path)) {

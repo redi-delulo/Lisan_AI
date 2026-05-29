@@ -8,10 +8,10 @@
     "build": "next build",
     "start": "next start",
     "prestart": "npm run check:env",
-    "lint": "next lint",
+    "lint": "node scripts/lint.mjs",
     "check:env": "node scripts/check-env.mjs",
     "typecheck": "tsc --noEmit",
-    "prebuild": "npm run typecheck"
+    "prebuild": "npm run check:env && npm run typecheck"
   },
   "dependencies": {
     "@radix-ui/react-icons": "^1.3.0",

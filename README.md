@@ -57,6 +57,7 @@ To set up the project locally, follow these steps:
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key used with row-level security. |
    | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only key used by the API route to persist AI chat history. |
    | `NEXT_PUBLIC_API_URL` | No | Overrides the client API base path; defaults to `/api`. |
+   | `NEXT_PUBLIC_APP_URL` | Yes | Public app URL used for auth redirects and SEO metadata, for example `https://your-app.vercel.app`. |
 
    Run `lib/database.sql` in the Supabase SQL editor to create the production tables and row-level-security policies for `users`, `profiles`, `lessons`, `vocabulary`, `quizzes`, `chat_history`, `progress`, `streaks`, and `translations`.
 
@@ -68,10 +69,11 @@ To set up the project locally, follow these steps:
 
 4. Run production checks before deploying:
    ```bash
+   npm run lint
    npm run typecheck
    npm run build
    ```
-   The build script also runs `npm run typecheck` automatically through `prebuild`, so Vercel catches stale references such as removed `setError` or undefined component types before publishing. If Vercel still reports one of those old symbols, redeploy the latest commit after clearing the Vercel build cache.
+   The build script also runs `npm run check:env && npm run typecheck` automatically through `prebuild`, so Vercel fails fast when required Gemini/Supabase/App URL variables are missing and catches stale references such as removed `setError` or undefined component types before publishing. Add these variables in Vercel Project Settings → Environment Variables for Production/Preview/Development, then redeploy the latest commit after clearing the Vercel build cache if an old symbol is still reported.
 
 5. Run the development server:
    ```bash
@@ -83,6 +85,11 @@ To set up the project locally, follow these steps:
    ```
 
 6. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+7. Deploy to Vercel after adding all environment variables in Project Settings:
+   ```bash
+   vercel --prod
+   ```
 
 ## Usage
 
