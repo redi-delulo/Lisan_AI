@@ -253,10 +253,6 @@ export function LanguageTutorComponent() {
     setIsSendingMessage(true)
     setConversation((entries) => [...entries, optimisticChatMessage])
 
-    setUserInput("")
-    setIsSendingMessage(true)
-    setConversation((entries) => [...entries, outgoingMessage])
-
     setError(null)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {

@@ -43,6 +43,7 @@ const forbiddenClientPatterns = [
   'const userMessage',
   'let userMessage',
   'fallbackWord',
+  'outgoingMessage',
 ]
 
 for (const pattern of forbiddenClientPatterns) {
