@@ -150,6 +150,7 @@ export function LanguageTutorComponent() {
       { speaker: "User", message: trimmedInput },
     ])
 
+    setError(null)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
         method: "POST",
