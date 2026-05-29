@@ -8,11 +8,13 @@ import {
   BookOpen,
   Bot,
   ChevronRight,
+  Crown,
   Eye,
   EyeOff,
   Flame,
   Globe2,
   GraduationCap,
+  Headphones,
   Home,
   Languages,
   Loader2,
@@ -63,7 +65,7 @@ const appNav: Array<{ id: AppView; label: string; icon: typeof Home }> = [
   { id: "home", label: "Home", icon: Home },
   { id: "lessons", label: "Lessons", icon: BookOpen },
   { id: "ai", label: "AI Tutor", icon: Bot },
-  { id: "speaking", label: "Practice", icon: Mic },
+  { id: "progress", label: "Progress", icon: Trophy },
   { id: "profile", label: "Profile", icon: User },
 ]
 
@@ -74,10 +76,13 @@ const allPages: Array<{ id: AppView; label: string; icon: typeof Home }> = [
   { id: "vocabulary", label: "Vocabulary", icon: Languages },
   { id: "grammar", label: "Grammar", icon: PenTool },
   { id: "speaking", label: "Speaking", icon: Mic },
+  { id: "listening", label: "Listening", icon: Headphones },
   { id: "translation", label: "Translation", icon: Globe2 },
   { id: "quiz", label: "Quiz", icon: GraduationCap },
   { id: "progress", label: "Progress", icon: Trophy },
-  { id: "profile", label: "Settings", icon: Settings },
+  { id: "profile", label: "Profile", icon: User },
+  { id: "settings", label: "Settings", icon: Settings },
+  { id: "premium", label: "Premium", icon: Crown },
 ]
 
 interface AiResponse {
@@ -130,12 +135,6 @@ function SkeletonCard() {
   return <div className="h-36 animate-pulse rounded-[1.75rem] bg-slate-100 dark:bg-slate-800" />
 }
 
-const fallbackWord: WordExercise = {
-  word: "Confidence",
-  definition: "A feeling of self-assurance.",
-  exampleSentence: "She spoke with confidence during her presentation.",
-}
-
 export function LanguageTutorComponent() {
   const [authView, setAuthView] = useState<AuthView>("welcome")
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -162,10 +161,6 @@ export function LanguageTutorComponent() {
   const currentProfile = dashboard.profile
 
   const authShellClass = isDarkMode ? "dark bg-slate-950" : "bg-[#f8fbf8]"
-
-  const currentWord = wordExercises[currentWordIndex] || fallbackWord
-  const dailyGoalProgress = Math.max(60, progress)
-  const completedWords = Math.max(12, Math.round((dailyGoalProgress / 100) * 20))
 
   useEffect(() => {
     const storedSession = loadStoredSession()
@@ -253,6 +248,10 @@ export function LanguageTutorComponent() {
       content: trimmedInput,
       created_at: new Date().toISOString(),
     }
+
+    setUserInput("")
+    setIsSendingMessage(true)
+    setConversation((entries) => [...entries, userMessage])
 
     setUserInput("")
     setIsSendingMessage(true)
@@ -385,10 +384,13 @@ export function LanguageTutorComponent() {
               {activeView === "vocabulary" && <VocabularyView latestVocabulary={latestVocabulary} onAction={() => setActiveView("ai")} />}
               {activeView === "grammar" && <EmptyState title="No grammar quizzes yet" description="Ask Lisan AI to create a grammar quiz and your saved quizzes will appear here." action="Create with AI" onAction={() => setActiveView("ai")} />}
               {activeView === "speaking" && <EmptyState title="Speaking practice is ready" description="Start an AI conversation and practice reading your answers aloud." action="Open AI Tutor" onAction={() => setActiveView("ai")} />}
+              {activeView === "listening" && <EmptyState title="No listening practice yet" description="Create listening lessons in your database or ask Lisan AI for listening exercises." action="Ask AI Tutor" onAction={() => setActiveView("ai")} />}
               {activeView === "translation" && <EmptyState title="No translations yet" description="Use the AI Tutor to translate words or sentences between English and Arabic." action="Translate with AI" onAction={() => setActiveView("ai")} />}
               {activeView === "quiz" && <EmptyState title="No quizzes yet" description="Generate quizzes with AI and save them to your database." action="Ask AI for a quiz" onAction={() => setActiveView("ai")} />}
               {activeView === "progress" && <ProgressView dashboard={dashboard} overallProgress={overallProgress} />}
               {activeView === "profile" && <ProfileView profile={currentProfile} email={session.user.email || ""} onLogout={handleLogout} />}
+              {activeView === "settings" && <ProfileView profile={currentProfile} email={session.user.email || ""} onLogout={handleLogout} />}
+              {activeView === "premium" && <EmptyState title="Premium is not active" description="Connect your subscription provider to unlock premium plans without hardcoded offers." action="Back to Dashboard" onAction={() => setActiveView("home")} />}
             </>
           )}
         </section>
@@ -608,6 +610,19 @@ function DashboardView({ displayName, completedLessons, xpPoints, currentStreak,
         <StatCard icon={BookOpen} label="Lessons Completed" value={completedLessons} />
         <StatCard icon={Trophy} label="XP Points" value={xpPoints} />
         <StatCard icon={Flame} label="Day Streak" value={currentStreak} />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {[
+          { label: "AI Tutor", icon: Bot, view: "ai" as AppView },
+          { label: "Lessons", icon: BookOpen, view: "lessons" as AppView },
+          { label: "Vocabulary", icon: Languages, view: "vocabulary" as AppView },
+          { label: "Practice", icon: Mic, view: "speaking" as AppView },
+        ].map(({ label, icon: Icon, view }) => (
+          <button key={label} onClick={() => setActiveView(view)} className="rounded-[1.5rem] border border-slate-200 bg-white p-4 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+            <Icon className="mx-auto mb-2 h-7 w-7 text-emerald-600" />
+            <span className="text-sm font-bold">{label}</span>
+          </button>
+        ))}
       </div>
       <div className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
         <div className="rounded-[2rem] bg-gradient-to-br from-emerald-600 to-emerald-700 p-6 text-white shadow-xl shadow-emerald-100 dark:shadow-none">

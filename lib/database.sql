@@ -1,4 +1,10 @@
 -- Lisan AI Supabase schema. Run this in the Supabase SQL editor.
+create table if not exists public.users (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  created_at timestamptz default now()
+);
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
@@ -76,6 +82,7 @@ create table if not exists public.translations (
   created_at timestamptz default now()
 );
 
+alter table public.users enable row level security;
 alter table public.profiles enable row level security;
 alter table public.lessons enable row level security;
 alter table public.vocabulary enable row level security;
@@ -85,6 +92,7 @@ alter table public.progress enable row level security;
 alter table public.streaks enable row level security;
 alter table public.translations enable row level security;
 
+create policy "users are private" on public.users for all using (auth.uid() = id) with check (auth.uid() = id);
 create policy "profiles are private" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);
 create policy "lessons are private" on public.lessons for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "vocabulary is private" on public.vocabulary for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

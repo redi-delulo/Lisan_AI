@@ -1,7 +1,7 @@
 export type SkillLevel = "Beginner" | "Intermediate" | "Advanced"
 
 export type AuthView = "welcome" | "login" | "signup" | "forgot"
-export type AppView = "home" | "ai" | "lessons" | "vocabulary" | "grammar" | "speaking" | "translation" | "quiz" | "progress" | "profile"
+export type AppView = "home" | "ai" | "lessons" | "vocabulary" | "grammar" | "speaking" | "listening" | "translation" | "quiz" | "progress" | "profile" | "settings" | "premium"
 
 export interface AuthUser {
   id: string
