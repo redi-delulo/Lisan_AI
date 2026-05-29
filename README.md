@@ -52,8 +52,10 @@ To set up the project locally, follow these steps:
    | Variable | Required | Purpose |
    | --- | --- | --- |
    | `GROQ_API_KEY` | Yes | Authenticates server-side requests to the Groq API. |
-   | `GROQ_MODEL` | No | Overrides the Groq chat model used by the API route; defaults to `llama-3.3-70b-versatile`. |
+   | `GROQ_MODEL` | No | Overrides the Groq chat model used by the API route; defaults to `llama-3.3-70b-versatile`. Do not use the decommissioned `mixtral-8x7b-32768` model. |
    | `NEXT_PUBLIC_API_URL` | No | Overrides the client API base path; defaults to `/api`. |
+
+   If your Vercel deployment still has `GROQ_MODEL=mixtral-8x7b-32768`, update it to `llama-3.3-70b-versatile` or delete the variable so the app can use the default model, then redeploy.
 
 4. Run the development server:
    ```bash

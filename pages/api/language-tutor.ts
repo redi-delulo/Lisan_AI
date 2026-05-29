@@ -2,7 +2,12 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { Groq } from 'groq-sdk'
 
 const groqApiKey = process.env.GROQ_API_KEY?.trim()
-const groqModel = process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile'
+const defaultGroqModel = 'llama-3.3-70b-versatile'
+const deprecatedModelReplacements: Record<string, string> = {
+  'mixtral-8x7b-32768': defaultGroqModel,
+}
+const requestedGroqModel = process.env.GROQ_MODEL?.trim() || defaultGroqModel
+const groqModel = deprecatedModelReplacements[requestedGroqModel] || requestedGroqModel
 const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null
 
 interface WordExercise {
@@ -41,15 +46,33 @@ function getErrorStatus(error: unknown): number | undefined {
   return undefined
 }
 
+function getGroqErrorCode(error: unknown): string | undefined {
+  if (typeof error === 'object' && error !== null && 'error' in error) {
+    const errorBody = (error as { error?: unknown }).error
+
+    if (typeof errorBody === 'object' && errorBody !== null && 'error' in errorBody) {
+      const nestedError = (errorBody as { error?: unknown }).error
+
+      if (typeof nestedError === 'object' && nestedError !== null && 'code' in nestedError) {
+        const code = (nestedError as { code?: unknown }).code
+        return typeof code === 'string' ? code : undefined
+      }
+    }
+  }
+
+  return undefined
+}
+
 function getPublicErrorMessage(error: unknown, fallbackMessage: string): string {
   const status = getErrorStatus(error)
+  const code = getGroqErrorCode(error)
 
   if (status === 401 || status === 403) {
     return 'Groq API authentication failed. Please check your GROQ_API_KEY in .env.local.'
   }
 
-  if (status === 404) {
-    return `Groq model "${groqModel}" was not found. Please check GROQ_MODEL in .env.local.`
+  if (status === 404 || code === 'model_decommissioned') {
+    return `Groq model "${requestedGroqModel}" is unavailable. Please remove GROQ_MODEL or set it to "${defaultGroqModel}".`
   }
 
   return fallbackMessage

@@ -4,6 +4,9 @@ import { resolve } from 'node:path'
 const envPath = resolve(process.cwd(), '.env.local')
 const requiredVariables = ['GROQ_API_KEY']
 const placeholderValues = new Set(['your_groq_api_key_here'])
+const deprecatedModelReplacements = new Map([
+  ['mixtral-8x7b-32768', 'llama-3.3-70b-versatile'],
+])
 
 function parseEnvFile(path) {
   if (!existsSync(path)) {
@@ -36,6 +39,7 @@ function parseEnvFile(path) {
 const localEnv = parseEnvFile(envPath)
 const missingVariables = []
 const placeholderVariables = []
+const deprecatedModel = deprecatedModelReplacements.get(localEnv.GROQ_MODEL || process.env.GROQ_MODEL || '')
 
 for (const key of requiredVariables) {
   const value = localEnv[key] || process.env[key] || ''
@@ -67,6 +71,12 @@ if (missingVariables.length > 0) {
 if (placeholderVariables.length > 0) {
   console.error(`Placeholder environment value(s) found for: ${placeholderVariables.join(', ')}`)
   console.error('Replace placeholder values in .env.local with real credentials.')
+  process.exit(1)
+}
+
+if (deprecatedModel) {
+  console.error(`Deprecated GROQ_MODEL value found. Use ${deprecatedModel} instead.`)
+  console.error('Update .env.local and your Vercel environment variables.')
   process.exit(1)
 }
 
