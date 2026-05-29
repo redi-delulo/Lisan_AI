@@ -3,21 +3,44 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookOpen, MessageCircle, PenTool, Zap, Send, ChevronRight, ChevronLeft } from "lucide-react"
+import {
+  Bell,
+  BookMarked,
+  BookOpen,
+  Bot,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  GraduationCap,
+  Headphones,
+  Home,
+  Mic,
+  PenTool,
+  Send,
+  Star,
+  Target,
+  Trophy,
+  User,
+  Volume2,
+} from "lucide-react"
 import { motion } from "framer-motion"
 
 const skillLevels = ["Beginner", "Intermediate", "Advanced"]
+
+const recentLessons = [
+  { title: "Grammar", lesson: "Lesson 8", progress: 80, icon: GraduationCap, color: "from-violet-500 to-purple-500", bg: "from-violet-50 to-purple-50" },
+  { title: "Vocabulary", lesson: "Lesson 15", progress: 70, icon: BookMarked, color: "from-orange-400 to-orange-600", bg: "from-orange-50 to-amber-50" },
+  { title: "Listening", lesson: "Lesson 7", progress: 60, icon: Headphones, color: "from-sky-400 to-blue-500", bg: "from-sky-50 to-blue-50" },
+  { title: "Speaking", lesson: "Lesson 5", progress: 75, icon: Mic, color: "from-fuchsia-400 to-purple-500", bg: "from-fuchsia-50 to-purple-50" },
+]
 
 type ConversationEntry = {
   speaker: "User" | "AI"
   message: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api"
 
 interface WordExercise {
   word: string;
@@ -29,6 +52,12 @@ interface GrammarExercise {
   question: string;
   options: string[];
   correctAnswer: string;
+}
+
+const fallbackWord: WordExercise = {
+  word: "Confidence",
+  definition: "A feeling of self-assurance.",
+  exampleSentence: "She spoke with confidence during her presentation.",
 }
 
 export function LanguageTutorComponent() {
@@ -46,6 +75,10 @@ export function LanguageTutorComponent() {
   const [wordExercises, setWordExercises] = useState<WordExercise[]>([])
   const [currentWordIndex, setCurrentWordIndex] = useState(0)
 
+  const currentWord = wordExercises[currentWordIndex] || fallbackWord
+  const dailyGoalProgress = Math.max(60, progress)
+  const completedWords = Math.max(12, Math.round((dailyGoalProgress / 100) * 20))
+
   useEffect(() => {
     fetchWords()
     fetchExercise()
@@ -59,9 +92,9 @@ export function LanguageTutorComponent() {
     setIsLoadingWord(true)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'vocabulary', skillLevel }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "vocabulary", skillLevel }),
       })
       const data = await response.json()
       if (response.ok) {
@@ -69,11 +102,11 @@ export function LanguageTutorComponent() {
         setCurrentWordIndex(0)
         setWordError(null)
       } else {
-        setWordError(data.error || 'Failed to fetch words')
+        setWordError(data.error || "Failed to fetch words")
         setWordExercises([])
       }
     } catch {
-      setWordError('Failed to fetch words')
+      setWordError("Failed to fetch words")
       setWordExercises([])
     } finally {
       setIsLoadingWord(false)
@@ -83,51 +116,52 @@ export function LanguageTutorComponent() {
   const fetchExercise = async () => {
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'grammar', skillLevel }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "grammar", skillLevel }),
       })
       const data = await response.json()
       if (response.ok) {
         setCurrentGrammarExercise(data)
         setSelectedAnswer(null)
         setIsAnswerCorrect(null)
-        setError(null) // Clear any previous errors
+        setError(null)
       } else {
-        setError(data.error || 'Failed to fetch exercise')
+        setError(data.error || "Failed to fetch exercise")
         setCurrentGrammarExercise(null)
       }
     } catch {
-      setError('Failed to fetch exercise')
+      setError("Failed to fetch exercise")
       setCurrentGrammarExercise(null)
     }
   }
 
   const handleConversationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!userInput.trim()) return
+    const trimmedInput = userInput.trim()
+    if (!trimmedInput) return
 
+    setError(null)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'conversation', userInput, skillLevel }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "conversation", userInput: trimmedInput, skillLevel }),
       })
       const data = await response.json()
       if (response.ok) {
-        const newConversation: ConversationEntry[] = [
-          ...conversation,
-          { speaker: "User", message: userInput },
+        setConversation((entries) => [
+          ...entries,
+          { speaker: "User", message: trimmedInput },
           { speaker: "AI", message: data.message },
-        ]
-        setConversation(newConversation)
+        ])
         setUserInput("")
         updateProgress()
       } else {
-        setError(data.error || 'Failed to get AI response')
+        setError(data.error || "Failed to get AI response")
       }
     } catch {
-      setError('Failed to get AI response')
+      setError("Failed to get AI response")
     }
   }
 
@@ -155,255 +189,321 @@ export function LanguageTutorComponent() {
 
   const handleAnswerSubmit = () => {
     if (currentGrammarExercise && selectedAnswer) {
-      const isCorrect = selectedAnswer === currentGrammarExercise.correctAnswer;
-      setIsAnswerCorrect(isCorrect);
+      const isCorrect = selectedAnswer === currentGrammarExercise.correctAnswer
+      setIsAnswerCorrect(isCorrect)
       if (isCorrect) {
-        updateProgress();
+        updateProgress()
       }
     }
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-5xl">
-      <motion.h1 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-5xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text"
-      >
-        Lisan AI
-      </motion.h1>
-      {error && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-red-500 mb-4 p-4 bg-red-100 rounded-md shadow-md"
-        >
-          {error}
-        </motion.div>
-      )}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mb-8 bg-white dark:bg-neutral-800 p-6 rounded-xl shadow-lg"
-      >
-        <label htmlFor="skill-level" className="block text-sm font-medium text-neutral-500 mb-2 dark:text-neutral-400">
-          Select Your Skill Level
-        </label>
-        <Select value={skillLevel} onValueChange={setSkillLevel}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select skill level" />
-          </SelectTrigger>
-          <SelectContent>
-            {skillLevels.map((level) => (
-              <SelectItem key={level} value={level}>
-                {level}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </motion.div>
-      <Tabs defaultValue="conversation" className="mb-8">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-full">
-          <TabsTrigger value="conversation" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:bg-neutral-700 dark:data-[state=active]:text-white">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Conversation
-          </TabsTrigger>
-          <TabsTrigger value="vocabulary" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:bg-neutral-700 dark:data-[state=active]:text-white">
-            <BookOpen className="w-4 h-4 mr-2" />
-            Vocabulary
-          </TabsTrigger>
-          <TabsTrigger value="grammar" className="rounded-full data-[state=active]:bg-white data-[state=active]:text-black dark:data-[state=active]:bg-neutral-700 dark:data-[state=active]:text-white">
-            <PenTool className="w-4 h-4 mr-2" />
-            Grammar
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="conversation">
-          <Card className="shadow-lg overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-              <CardTitle className="flex items-center text-2xl">
-                <MessageCircle className="w-6 h-6 mr-2" />
-                Conversation Practice
-              </CardTitle>
-              <CardDescription className="text-blue-100">Enhance your language skills through interactive dialogue.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="mb-4 h-80 overflow-y-auto border border-neutral-200 rounded-md p-4 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800/50">
-                {conversation.map((entry, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className={`mb-3 p-3 rounded-lg flex items-start ${
-                      entry.speaker === "AI" ? "bg-blue-100 dark:bg-blue-900/50" : "bg-green-100 dark:bg-green-900/50"
-                    }`}
-                  >
-                    <div className={`w-8 h-8 mr-2 rounded-full flex items-center justify-center ${
-                      entry.speaker === "AI" ? "bg-blue-500 text-white" : "bg-green-500 text-white"
-                    }`}>
-                      {entry.speaker === "AI" ? "AI" : "You"}
-                    </div>
-                    <div>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                        entry.speaker === "AI" ? "bg-blue-200 text-blue-800" : "bg-green-200 text-green-800"
-                      }`}>
-                        {entry.speaker}
-                      </span>
-                      <p className="text-neutral-800 dark:text-neutral-200 mt-1">{entry.message}</p>
-                    </div>
-                  </motion.div>
-                ))}
-                <div ref={conversationEndRef} />
-              </div>
-              <form onSubmit={handleConversationSubmit} className="flex gap-2">
-                <Input
-                  type="text"
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-grow"
-                />
-                <Button type="submit" className="px-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white">
-                  <Send className="w-4 h-4 mr-2" />
-                  Send
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="vocabulary">
-          <Card className="shadow-lg overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-500 to-teal-500 text-white">
-              <CardTitle className="flex items-center text-2xl">
-                <BookOpen className="w-6 h-6 mr-2" />
-                Vocabulary Building
-              </CardTitle>
-              <CardDescription className="text-green-100">Expand your vocabulary with words tailored to your skill level.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {wordError ? (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-red-500 mb-4 p-4 bg-red-100 rounded-md"
-                >
-                  {wordError}
-                </motion.div>
-              ) : wordExercises.length > 0 ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-4 bg-gradient-to-br from-green-100 to-teal-100 dark:from-green-900/30 dark:to-teal-900/30 p-6 rounded-lg shadow-inner"
-                >
-                  <div className="text-4xl font-bold text-center text-green-600 dark:text-green-400">{wordExercises[currentWordIndex].word}</div>
-                  <div className="text-lg"><span className="font-semibold">Definition:</span> {wordExercises[currentWordIndex].definition}</div>
-                  <div className="text-lg"><span className="font-semibold">Example:</span> {wordExercises[currentWordIndex].exampleSentence}</div>
-                  <div className="text-sm text-neutral-500 text-center">Word {currentWordIndex + 1} of {wordExercises.length}</div>
-                </motion.div>
-              ) : (
-                <div className="text-center p-4">Loading word exercises...</div>
-              )}
-              <div className="flex justify-between mt-6">
-                <Button onClick={() => setCurrentWordIndex(prev => Math.max(0, prev - 1))} disabled={currentWordIndex === 0 || isLoadingWord} className="px-4 bg-green-500 hover:bg-green-600">
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Previous
-                </Button>
-                <Button onClick={handleNextWord} className="px-4 bg-green-500 hover:bg-green-600" disabled={isLoadingWord}>
-                  {isLoadingWord ? 'Loading...' : currentWordIndex < wordExercises.length - 1 ? 'Next' : 'New Set'}
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="grammar">
-          <Card className="shadow-lg overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-              <CardTitle className="flex items-center text-2xl">
-                <PenTool className="w-6 h-6 mr-2" />
-                Grammar Exercises
-              </CardTitle>
-              <CardDescription className="text-purple-100">Sharpen your grammar skills with interactive exercises.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {error ? (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="text-red-500 mb-4 p-4 bg-red-100 rounded-md"
-                >
-                  {error}
-                </motion.div>
-              ) : currentGrammarExercise ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-4"
-                >
-                  <div className="text-lg font-semibold bg-purple-100 dark:bg-purple-900/30 p-4 rounded-lg shadow-inner">{currentGrammarExercise.question}</div>
-                  <div className="space-y-2">
-                    {currentGrammarExercise.options.map((option, index) => (
-                      <Button
-                        key={index}
-                        onClick={() => setSelectedAnswer(option)}
-                        variant={selectedAnswer === option ? "default" : "outline"}
-                        className="w-full justify-start transition-all duration-200 ease-in-out transform hover:scale-105"
-                      >
-                        {option}
-                      </Button>
-                    ))}
-                  </div>
-                  <Button onClick={handleAnswerSubmit} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white" disabled={!selectedAnswer}>
-                    Submit Answer
-                  </Button>
-                  {isAnswerCorrect !== null && (
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className={`text-center font-semibold p-4 rounded-lg ${isAnswerCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-                    >
-                      {isAnswerCorrect ? 'Correct!' : (
-                        <>
-                          <p>Incorrect. Try again!</p>
-                          <p className="mt-2">The correct answer is: <span className="font-bold">{currentGrammarExercise.correctAnswer}</span></p>
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                </motion.div>
-              ) : (
-                <div className="text-center p-4">Loading grammar exercise...</div>
-              )}
-              <div className="flex justify-center mt-6">
-                <Button onClick={handleNextExercise} className="px-8 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
-                  Next Exercise
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      <Card className="shadow-lg overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white">
-          <CardTitle className="flex items-center text-2xl">
-            <Zap className="w-6 h-6 mr-2" />
-            Your Learning Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="relative w-full h-6 bg-yellow-100 dark:bg-yellow-900/30 rounded-full overflow-hidden">
-            <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-300 ease-in-out"
-              style={{ width: `${progress}%` }}
-            ></div>
+    <main className="min-h-screen bg-[#f8fbf8] text-[#081735]">
+      <div className="mx-auto min-h-screen w-full max-w-md bg-white px-5 pb-28 pt-4 shadow-2xl sm:my-6 sm:rounded-[2.5rem]">
+        <div className="mb-6 flex items-center justify-between px-2 text-sm font-bold text-[#07142f]">
+          <span>9:41</span>
+          <div className="flex items-center gap-1">
+            <span className="h-3 w-1.5 rounded-sm bg-[#07142f]" />
+            <span className="h-4 w-1.5 rounded-sm bg-[#07142f]" />
+            <span className="h-5 w-1.5 rounded-sm bg-[#07142f]" />
+            <span className="ml-1 h-4 w-7 rounded border-2 border-[#07142f] p-0.5"><span className="block h-full rounded-sm bg-[#07142f]" /></span>
           </div>
-          <p className="text-center mt-2 text-sm font-medium text-yellow-600 dark:text-yellow-400">{progress}% Complete</p>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        <motion.header
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="mb-7 flex items-start justify-between gap-4"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[1.4rem] bg-[#16a764] text-white shadow-lg shadow-emerald-200">
+              <BookOpen className="h-9 w-9" />
+            </div>
+            <div>
+              <p className="text-2xl font-extrabold leading-tight tracking-tight">Welcome back,<br />Ahmed! 👋</p>
+              <p className="mt-2 text-sm text-slate-500">Let&apos;s continue your learning journey</p>
+            </div>
+          </div>
+          <div className="relative mt-2 rounded-full bg-white p-2 shadow-sm">
+            <Bell className="h-7 w-7 text-[#081735]" />
+            <span className="absolute right-1 top-1 h-3 w-3 rounded-full bg-[#18b96f] ring-2 ring-white" />
+          </div>
+        </motion.header>
+
+        <section className="mb-7 grid grid-cols-[1fr_1fr] gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.1 }}
+            className="col-span-2 rounded-[1.8rem] bg-gradient-to-br from-[#0fb86a] to-[#079a56] p-6 text-white shadow-xl shadow-emerald-100"
+          >
+            <div className="mb-8 flex items-start justify-between">
+              <div>
+                <div className="mb-7 flex items-center gap-3">
+                  <Target className="h-9 w-9" />
+                  <h2 className="text-2xl font-extrabold">Daily Goal</h2>
+                </div>
+                <p className="mb-6 text-lg font-medium">Learn 20 new words</p>
+                <div className="h-2.5 w-40 rounded-full bg-white/30">
+                  <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(dailyGoalProgress, 100)}%` }} />
+                </div>
+                <p className="mt-5 text-xl font-extrabold">{completedWords} / 20 words</p>
+              </div>
+              <div className="grid h-24 w-24 place-items-center rounded-full border-[10px] border-white/25 border-r-white border-t-white text-2xl font-extrabold">
+                {dailyGoalProgress}%
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.15 }}
+            className="rounded-[1.8rem] bg-[#071b44] p-5 text-white shadow-xl shadow-slate-200"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xl font-extrabold">AI Tutor</h2>
+              <Bot className="h-10 w-10 text-emerald-300" />
+            </div>
+            <div className="mx-auto mb-4 grid h-24 w-24 place-items-center rounded-full bg-white text-5xl shadow-inner">🤖</div>
+            <a href="#ai-tutor" className="flex items-center justify-center gap-2 rounded-2xl bg-[#19b86d] px-4 py-3 font-bold text-white shadow-lg shadow-emerald-900/20">
+              Chat Now <ChevronRight className="h-5 w-5" />
+            </a>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.2 }}
+            className="rounded-[1.8rem] border border-slate-100 bg-white p-5 shadow-xl shadow-slate-100"
+          >
+            <div className="mb-3 flex items-center gap-3">
+              <Flame className="h-8 w-8 fill-orange-400 text-orange-400" />
+              <div>
+                <p className="text-2xl font-extrabold">12</p>
+                <p className="text-sm text-slate-500">Day Streak</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Trophy className="h-8 w-8 fill-amber-400 text-amber-400" />
+              <div>
+                <p className="text-2xl font-extrabold">1250</p>
+                <p className="text-sm text-slate-500">XP Points</p>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-6 rounded-3xl border border-red-100 bg-red-50 p-4 text-sm font-medium text-red-600"
+          >
+            {error}
+          </motion.div>
+        )}
+
+        <section className="mb-7">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold tracking-tight">Continue Learning</h2>
+            <button className="text-base font-bold text-[#09a75d]">See all</button>
+          </div>
+          <div className="rounded-[1.7rem] border border-slate-100 bg-white p-3 shadow-lg shadow-slate-100">
+            <div className="grid grid-cols-[42%_1fr] gap-4">
+              <div className="grid min-h-32 place-items-center rounded-[1.4rem] bg-gradient-to-br from-emerald-50 to-orange-50 text-6xl">☕</div>
+              <div className="flex flex-col justify-center">
+                <h3 className="text-lg font-extrabold">Daily Conversation</h3>
+                <p className="mt-2 text-sm text-slate-500">Lesson 12 • At the Coffee Shop</p>
+                <div className="mt-5 h-2 rounded-full bg-slate-200">
+                  <div className="h-full w-[65%] rounded-full bg-[#18b86d]" />
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-slate-500">65% Completed</p>
+                  <a href="#ai-tutor" className="rounded-2xl bg-[#12a85f] px-5 py-3 text-sm font-bold text-white">Continue</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mb-7 rounded-[1.7rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-lg shadow-emerald-50">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <p className="mb-3 text-lg font-extrabold text-[#08a85b]">Vocabulary of the Day</p>
+              <div className="flex items-center gap-3">
+                <h2 className="text-3xl font-extrabold tracking-tight">{currentWord.word}</h2>
+                <Volume2 className="h-6 w-6 fill-[#13a760] text-[#13a760]" />
+              </div>
+            </div>
+            <Star className="h-8 w-8 text-[#08a85b]" />
+          </div>
+          <p className="mb-4 text-xl font-semibold">/{currentWord.word.toLowerCase()}/</p>
+          <p className="mb-5 text-lg text-[#081735]">{currentWord.definition}</p>
+          <p className="rounded-2xl bg-white/70 p-3 text-sm text-slate-500">{currentWord.exampleSentence}</p>
+          {wordError && <p className="mt-3 text-sm font-medium text-amber-600">Using sample word while API loads: {wordError}</p>}
+          <div className="mt-5 flex items-center justify-between">
+            <Button onClick={() => setCurrentWordIndex(prev => Math.max(0, prev - 1))} disabled={currentWordIndex === 0 || isLoadingWord} variant="ghost" className="rounded-2xl text-[#08a85b]">
+              <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+            </Button>
+            <Button onClick={handleNextWord} disabled={isLoadingWord} className="rounded-2xl bg-[#12a85f] text-white hover:bg-[#0f944f]">
+              {isLoadingWord ? "Loading..." : currentWordIndex < wordExercises.length - 1 ? "Next" : "New Set"}
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </section>
+
+        <section className="mb-7">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold tracking-tight">Recent Lessons</h2>
+            <button className="text-base font-bold text-[#09a75d]">See all</button>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {recentLessons.map(({ title, lesson, progress: lessonProgress, icon: Icon, color, bg }) => (
+              <div key={title} className={`rounded-[1.3rem] border border-slate-100 bg-gradient-to-br ${bg} p-4 shadow-sm`}>
+                <div className="mb-5 flex items-center gap-3">
+                  <div className={`grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${color} text-white shadow-lg`}>
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <p className="font-extrabold">{title}</p>
+                    <p className="text-sm text-slate-500">{lesson}</p>
+                  </div>
+                </div>
+                <p className="mb-3 text-sm font-bold">{lessonProgress}%</p>
+                <div className="h-2 rounded-full bg-slate-200">
+                  <div className={`h-full rounded-full bg-gradient-to-r ${color}`} style={{ width: `${lessonProgress}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-7">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold tracking-tight">Your Statistics</h2>
+            <button className="text-base font-bold text-[#09a75d]">See all</button>
+          </div>
+          <div className="grid grid-cols-4 rounded-[1.7rem] border border-slate-100 bg-white p-4 text-center shadow-lg shadow-slate-100">
+            {[
+              { icon: BookOpen, value: "24", label: "Lessons" },
+              { icon: Trophy, value: "1250", label: "XP" },
+              { icon: Flame, value: "12", label: "Streak" },
+              { icon: Target, value: "75%", label: "Progress" },
+            ].map(({ icon: Icon, value, label }) => (
+              <div key={label} className="border-r border-slate-100 last:border-r-0">
+                <Icon className="mx-auto mb-3 h-8 w-8 text-[#14ae68]" />
+                <p className="text-xl font-extrabold">{value}</p>
+                <p className="text-xs text-slate-500">{label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="ai-tutor" className="mb-7 rounded-[1.8rem] bg-[#071b44] p-5 text-white shadow-xl shadow-slate-200">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-emerald-300">AI Tutor</p>
+              <h2 className="text-2xl font-extrabold">Practice conversation</h2>
+            </div>
+            <Select value={skillLevel} onValueChange={setSkillLevel}>
+              <SelectTrigger className="w-32 rounded-2xl border-white/20 bg-white/10 text-white">
+                <SelectValue placeholder="Level" />
+              </SelectTrigger>
+              <SelectContent>
+                {skillLevels.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="mb-4 max-h-72 overflow-y-auto rounded-3xl bg-white/10 p-4">
+            {conversation.length === 0 ? (
+              <div className="py-6 text-center text-sm text-white/70">Start a chat with your AI tutor.</div>
+            ) : conversation.map((entry, index) => (
+              <div key={`${entry.speaker}-${index}`} className={`mb-3 flex ${entry.speaker === "User" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[82%] rounded-3xl px-4 py-3 text-sm ${entry.speaker === "User" ? "bg-[#19b86d] text-white" : "bg-white text-[#081735]"}`}>
+                  <p className="mb-1 text-xs font-bold opacity-70">{entry.speaker === "User" ? "You" : "Lisan AI"}</p>
+                  {entry.message}
+                </div>
+              </div>
+            ))}
+            <div ref={conversationEndRef} />
+          </div>
+          <form onSubmit={handleConversationSubmit} className="flex gap-2">
+            <Input
+              type="text"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              placeholder="Type your message..."
+              className="h-12 flex-grow rounded-2xl border-white/10 bg-white text-[#081735]"
+            />
+            <Button type="submit" className="h-12 rounded-2xl bg-[#19b86d] px-4 text-white hover:bg-[#139c5d]">
+              <Send className="h-5 w-5" />
+            </Button>
+          </form>
+        </section>
+
+        <section className="rounded-[1.8rem] border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-5 shadow-lg shadow-purple-50">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-purple-500">Grammar Coach</p>
+              <h2 className="text-2xl font-extrabold">Quick Exercise</h2>
+            </div>
+            <PenTool className="h-8 w-8 text-purple-500" />
+          </div>
+          {currentGrammarExercise ? (
+            <div className="space-y-4">
+              <div className="rounded-3xl bg-white p-4 font-semibold shadow-sm">{currentGrammarExercise.question}</div>
+              <div className="space-y-2">
+                {currentGrammarExercise.options.map((option) => (
+                  <Button
+                    key={option}
+                    onClick={() => setSelectedAnswer(option)}
+                    variant={selectedAnswer === option ? "default" : "outline"}
+                    className={`w-full justify-start rounded-2xl ${selectedAnswer === option ? "bg-purple-600 text-white" : "bg-white"}`}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+              <Button onClick={handleAnswerSubmit} className="w-full rounded-2xl bg-purple-600 text-white hover:bg-purple-700" disabled={!selectedAnswer}>
+                Submit Answer
+              </Button>
+              {isAnswerCorrect !== null && (
+                <div className={`rounded-3xl p-4 text-center font-bold ${isAnswerCorrect ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                  {isAnswerCorrect ? "Correct!" : `Incorrect. Correct answer: ${currentGrammarExercise.correctAnswer}`}
+                </div>
+              )}
+              <Button onClick={handleNextExercise} variant="ghost" className="w-full rounded-2xl text-purple-600">
+                Next Exercise <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-3xl bg-white p-6 text-center text-slate-500">Loading grammar exercise...</div>
+          )}
+        </section>
+      </div>
+
+      <nav className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-5 rounded-t-[2rem] bg-white px-5 pb-5 pt-4 shadow-[0_-12px_30px_rgba(15,23,42,0.08)] sm:bottom-6 sm:rounded-[2rem]">
+        {[
+          { label: "Home", icon: Home, active: true },
+          { label: "Lessons", icon: BookOpen },
+          { label: "AI Tutor", icon: Bot, special: true },
+          { label: "Practice", icon: Mic },
+          { label: "Profile", icon: User },
+        ].map(({ label, icon: Icon, active, special }) => (
+          <a key={label} href={special ? "#ai-tutor" : "#"} className={`flex flex-col items-center gap-1 text-xs font-bold ${active || special ? "text-[#12a85f]" : "text-slate-500"}`}>
+            <span className={`${special ? "-mt-10 grid h-16 w-16 place-items-center rounded-full bg-[#18b86d] text-white shadow-xl shadow-emerald-200" : "grid h-8 w-8 place-items-center"}`}>
+              <Icon className={special ? "h-9 w-9" : "h-7 w-7"} />
+            </span>
+            {label}
+          </a>
+        ))}
+      </nav>
+    </main>
   )
 }
