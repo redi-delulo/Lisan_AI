@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "prestart": "npm run check:env",
-    "lint": "next lint",
+    "lint": "npx tsc --noEmit",
     "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {

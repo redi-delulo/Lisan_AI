@@ -1,5 +1,5 @@
 import { LanguageTutorComponent } from "@/components/language-tutor";
 
-export default function Home() {
+export default function AppScreen() {
   return <LanguageTutorComponent />;
 }
