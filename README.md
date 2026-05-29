@@ -39,7 +39,13 @@ To set up the project locally, follow these steps:
    ```
 
 3. Set up environment variables:
-   Create a `.env.local` file in the root directory and add the necessary API keys and configuration variables.
+   ```bash
+   cp .env.example .env.local
+   ```
+   Add your Groq API key to `.env.local`, then verify the required values are present:
+   ```bash
+   npm run check:env
+   ```
 
 4. Run the development server:
    ```bash
