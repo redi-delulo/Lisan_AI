@@ -39,7 +39,7 @@ const clientSource = existsSync('components/language-tutor.tsx') ? readFileSync(
 const forbiddenClientPatterns = [
   'GEMINI_API_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'setError(',
+  'setError',
   'const userMessage',
   'let userMessage',
   'fallbackWord',
