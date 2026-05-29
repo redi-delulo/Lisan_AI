@@ -17,14 +17,26 @@ interface GrammarExercise {
   correctAnswer: string;
 }
 
+const allowedSkillLevels = ['Beginner', 'Intermediate', 'Advanced'] as const
+type SkillLevel = (typeof allowedSkillLevels)[number]
+
+function normalizeSkillLevel(value: unknown): SkillLevel {
+  return allowedSkillLevels.includes(value as SkillLevel) ? (value as SkillLevel) : 'Beginner'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     const { action, skillLevel, userInput } = req.body
+    const normalizedSkillLevel = normalizeSkillLevel(skillLevel)
 
     switch (action) {
       case 'conversation':
+        if (typeof userInput !== 'string' || !userInput.trim()) {
+          return res.status(400).json({ error: 'A message is required' })
+        }
+
         try {
-          const aiResponse = await generateAIResponse(userInput, skillLevel)
+          const aiResponse = await generateAIResponse(userInput.trim(), normalizedSkillLevel)
           return res.status(200).json({ message: aiResponse })
         } catch (error) {
           console.error('Error generating AI response:', error)
@@ -32,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       case 'vocabulary':
         try {
-          const wordExercises = await generateWordExercises(skillLevel)
+          const wordExercises = await generateWordExercises(normalizedSkillLevel)
           return res.status(200).json(wordExercises)
         } catch (error) {
           console.error('Error generating word exercises:', error)
@@ -40,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       case 'grammar':
         try {
-          const grammarExercise = await generateGrammarExercise(skillLevel)
+          const grammarExercise = await generateGrammarExercise(normalizedSkillLevel)
           return res.status(200).json(grammarExercise)
         } catch (error) {
           console.error('Error generating grammar exercise:', error)
@@ -55,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function generateAIResponse(input: string, skillLevel: string): Promise<string> {
+async function generateAIResponse(input: string, skillLevel: SkillLevel): Promise<string> {
   const prompt = `You are a helpful language tutor assisting a ${skillLevel} level student. 
   Respond to the following input in a way that's appropriate for their skill level: "${input}"`
 
@@ -74,7 +86,7 @@ async function generateAIResponse(input: string, skillLevel: string): Promise<st
   }
 }
 
-async function generateWordExercises(skillLevel: string, count: number = 5): Promise<WordExercise[]> {
+async function generateWordExercises(skillLevel: SkillLevel, count: number = 5): Promise<WordExercise[]> {
   const prompt = `Generate ${count} vocabulary word exercises for a ${skillLevel} level English learner. 
   Choose random words that are appropriate for this level, but avoid common words like "hello" or "goodbye".
   For each word, provide the word, its definition, and an example sentence. Format the response as a JSON array with the following structure:
@@ -128,7 +140,7 @@ async function generateWordExercises(skillLevel: string, count: number = 5): Pro
   }
 }
 
-async function generateGrammarExercise(skillLevel: string): Promise<GrammarExercise> {
+async function generateGrammarExercise(skillLevel: SkillLevel): Promise<GrammarExercise> {
   let prompt = ''
   if (skillLevel === 'Advanced') {
     prompt = `Generate an advanced grammar exercise for an English learner. 
@@ -186,7 +198,7 @@ async function generateGrammarExercise(skillLevel: string): Promise<GrammarExerc
   }
 }
 
-function createDefaultExercise(skillLevel: string): GrammarExercise {
+function createDefaultExercise(skillLevel: SkillLevel): GrammarExercise {
   switch (skillLevel) {
     case 'Beginner':
       return {
