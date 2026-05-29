@@ -73,7 +73,7 @@ To set up the project locally, follow these steps:
    npm run typecheck
    npm run build
    ```
-   The build script runs `npm run typecheck` automatically through `prebuild`, so Vercel catches stale references such as removed `setError` or undefined component types before publishing. Run `npm run check:env` yourself before deployment to verify required Gemini/Supabase values. Add these variables in Vercel Project Settings → Environment Variables for Production/Preview/Development, then redeploy the latest commit after clearing the Vercel build cache if an old symbol is still reported. The build no longer requires a local `.env.local` file, which prevents Vercel from failing when secrets are provided through Project Settings instead of a checked-out file.
+   Run `npm run typecheck` and `npm run check:env` yourself before deployment to verify TypeScript and required Gemini/Supabase values. Vercel uses `npm run build`, and this project no longer defines a `prebuild` lifecycle hook, so deployment builds cannot run the old env check that failed because `.env.local` was absent from the checked-out repository. Add environment variables in Vercel Project Settings → Environment Variables for Production/Preview/Development, then redeploy the latest commit after clearing the Vercel build cache if an old symbol or old env-check message is still reported.
 
 5. Run the development server:
    ```bash
