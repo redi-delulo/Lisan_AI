@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { Groq } from 'groq-sdk'
 
 const groqApiKey = process.env.GROQ_API_KEY?.trim()
-const groqModel = process.env.GROQ_MODEL || 'mixtral-8x7b-32768'
+const groqModel = process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile'
 const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null
 
 interface WordExercise {
@@ -32,6 +32,39 @@ function getGroqClient(): Groq {
   return groq
 }
 
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status?: unknown }).status
+    return typeof status === 'number' ? status : undefined
+  }
+
+  return undefined
+}
+
+function getPublicErrorMessage(error: unknown, fallbackMessage: string): string {
+  const status = getErrorStatus(error)
+
+  if (status === 401 || status === 403) {
+    return 'Groq API authentication failed. Please check your GROQ_API_KEY in .env.local.'
+  }
+
+  if (status === 404) {
+    return `Groq model "${groqModel}" was not found. Please check GROQ_MODEL in .env.local.`
+  }
+
+  return fallbackMessage
+}
+
+function createDefaultAIResponse(input: string, skillLevel: SkillLevel): string {
+  const levelHint = skillLevel === 'Beginner'
+    ? 'I will keep my English simple and clear.'
+    : skillLevel === 'Intermediate'
+      ? 'I will use natural English and explain tricky words when helpful.'
+      : 'I will use richer vocabulary and help you refine advanced expression.'
+
+  return `I had trouble connecting to the AI service, but we can still practice. You wrote: "${input}". ${levelHint} Try writing one more sentence about the same idea, and I will help you improve it.`
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
     if (!groq) {
@@ -52,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(200).json({ message: aiResponse })
         } catch (error) {
           console.error('Error generating AI response:', error)
-          return res.status(500).json({ error: 'Failed to generate AI response' })
+          return res.status(500).json({ error: getPublicErrorMessage(error, 'Failed to generate AI response') })
         }
       case 'vocabulary':
         try {
@@ -60,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(200).json(wordExercises)
         } catch (error) {
           console.error('Error generating word exercises:', error)
-          return res.status(500).json({ error: 'Failed to generate word exercises' })
+          return res.status(500).json({ error: getPublicErrorMessage(error, 'Failed to generate word exercises') })
         }
       case 'grammar':
         try {
@@ -68,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(200).json(grammarExercise)
         } catch (error) {
           console.error('Error generating grammar exercise:', error)
-          return res.status(500).json({ error: 'Failed to generate grammar exercise' })
+          return res.status(500).json({ error: getPublicErrorMessage(error, 'Failed to generate grammar exercise') })
         }
       default:
         return res.status(400).json({ error: 'Invalid action' })
@@ -93,8 +126,15 @@ async function generateAIResponse(input: string, skillLevel: SkillLevel): Promis
 
     return completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response."
   } catch (error) {
-    console.error('Error calling Groq API:', error)
-    throw new Error('Failed to generate AI response')
+    const status = getErrorStatus(error)
+
+    if (status === 401 || status === 403 || status === 404) {
+      console.error('Configuration error calling Groq API:', error)
+      throw error
+    }
+
+    console.error('Error calling Groq API, using fallback response:', error)
+    return createDefaultAIResponse(input, skillLevel)
   }
 }
 

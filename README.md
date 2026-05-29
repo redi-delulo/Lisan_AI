@@ -52,7 +52,7 @@ To set up the project locally, follow these steps:
    | Variable | Required | Purpose |
    | --- | --- | --- |
    | `GROQ_API_KEY` | Yes | Authenticates server-side requests to the Groq API. |
-   | `GROQ_MODEL` | No | Overrides the Groq chat model used by the API route. |
+   | `GROQ_MODEL` | No | Overrides the Groq chat model used by the API route; defaults to `llama-3.3-70b-versatile`. |
    | `NEXT_PUBLIC_API_URL` | No | Overrides the client API base path; defaults to `/api`. |
 
 4. Run the development server:
