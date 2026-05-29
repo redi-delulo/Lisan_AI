@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { Groq } from 'groq-sdk'
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-})
+const groqApiKey = process.env.GROQ_API_KEY?.trim()
+const groqModel = process.env.GROQ_MODEL || 'mixtral-8x7b-32768'
+const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null
 
 interface WordExercise {
   word: string;
@@ -24,8 +24,20 @@ function normalizeSkillLevel(value: unknown): SkillLevel {
   return allowedSkillLevels.includes(value as SkillLevel) ? (value as SkillLevel) : 'Beginner'
 }
 
+function getGroqClient(): Groq {
+  if (!groq) {
+    throw new Error('Missing GROQ_API_KEY configuration')
+  }
+
+  return groq
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
+    if (!groq) {
+      return res.status(500).json({ error: 'Server is missing GROQ_API_KEY configuration' })
+    }
+
     const { action, skillLevel, userInput } = req.body
     const normalizedSkillLevel = normalizeSkillLevel(skillLevel)
 
@@ -72,9 +84,9 @@ async function generateAIResponse(input: string, skillLevel: SkillLevel): Promis
   Respond to the following input in a way that's appropriate for their skill level: "${input}"`
 
   try {
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
+      model: groqModel,
       temperature: 0.7,
       max_tokens: 150,
     })
@@ -104,9 +116,9 @@ async function generateWordExercises(skillLevel: SkillLevel, count: number = 5):
   ]`
 
   try {
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
+      model: groqModel,
       temperature: 0.9,
       max_tokens: 1000,
     })
@@ -162,9 +174,9 @@ async function generateGrammarExercise(skillLevel: SkillLevel): Promise<GrammarE
   }
 
   try {
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
+      model: groqModel,
       temperature: 0.7,
       max_tokens: 300, // Increased max_tokens for more complex responses
     })

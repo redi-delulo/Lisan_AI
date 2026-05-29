@@ -171,7 +171,7 @@ export function LanguageTutorComponent() {
         transition={{ duration: 0.5 }}
         className="text-5xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text"
       >
-        AI Language Tutor
+        Lisan AI
       </motion.h1>
       {error && (
         <motion.div 
