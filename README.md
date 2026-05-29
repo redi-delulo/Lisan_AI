@@ -71,7 +71,7 @@ To set up the project locally, follow these steps:
    npm run typecheck
    npm run build
    ```
-   These checks catch TypeScript errors like undefined component types before Vercel builds the app.
+   The build script also runs `npm run typecheck` automatically through `prebuild`, so Vercel catches stale references such as removed `setError` or undefined component types before publishing. If Vercel still reports one of those old symbols, redeploy the latest commit after clearing the Vercel build cache.
 
 5. Run the development server:
    ```bash
