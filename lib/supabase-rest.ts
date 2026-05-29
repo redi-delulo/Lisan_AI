@@ -2,7 +2,17 @@ import type { AuthSession, DashboardData, Profile } from "./app-types"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || ""
+function getAppUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+
+  if (typeof window !== "undefined") {
+    return window.location.origin
+  }
+
+  return ""
+}
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
@@ -55,7 +65,7 @@ export async function sendPasswordReset(email: string): Promise<void> {
   const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
     method: "POST",
     headers: authHeaders,
-    body: JSON.stringify({ email, redirect_to: appUrl || undefined }),
+    body: JSON.stringify({ email, redirect_to: getAppUrl() || undefined }),
   })
 
   await parseResponse<unknown>(response)

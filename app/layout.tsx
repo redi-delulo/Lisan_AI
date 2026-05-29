@@ -13,7 +13,7 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
 
 export const metadata: Metadata = {
   metadataBase: appUrl ? new URL(appUrl) : undefined,

@@ -55,9 +55,9 @@ To set up the project locally, follow these steps:
    | `GEMINI_MODEL` | No | Overrides the Gemini model used by the API route; defaults to `gemini-2.5-flash`. |
    | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL for real authentication and user data. |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key used with row-level security. |
-   | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only key used by the API route to persist AI chat history. |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Recommended | Server-only key used by the API route to persist AI chat history. Without it, the API still answers but chat persistence is disabled. |
    | `NEXT_PUBLIC_API_URL` | No | Overrides the client API base path; defaults to `/api`. |
-   | `NEXT_PUBLIC_APP_URL` | Yes | Public app URL used for auth redirects and SEO metadata, for example `https://your-app.vercel.app`. |
+   | `NEXT_PUBLIC_APP_URL` | Recommended | Public app URL used for auth redirects and SEO metadata, for example `https://your-app.vercel.app`. On Vercel, the app falls back to `VERCEL_URL` when this is not set. |
 
    Run `lib/database.sql` in the Supabase SQL editor to create the production tables and row-level-security policies for `users`, `profiles`, `lessons`, `vocabulary`, `quizzes`, `chat_history`, `progress`, `streaks`, and `translations`.
 
@@ -73,7 +73,7 @@ To set up the project locally, follow these steps:
    npm run typecheck
    npm run build
    ```
-   The build script also runs `npm run check:env && npm run typecheck` automatically through `prebuild`, so Vercel fails fast when required Gemini/Supabase/App URL variables are missing and catches stale references such as removed `setError` or undefined component types before publishing. Add these variables in Vercel Project Settings → Environment Variables for Production/Preview/Development, then redeploy the latest commit after clearing the Vercel build cache if an old symbol is still reported.
+   Run `npm run typecheck` and `npm run check:env` yourself before deployment to verify TypeScript and required Gemini/Supabase values. Vercel uses `npm run build`, and this project no longer defines a `prebuild` lifecycle hook, so deployment builds cannot run the old env check that failed because `.env.local` was absent from the checked-out repository. Add environment variables in Vercel Project Settings → Environment Variables for Production/Preview/Development, then redeploy the latest commit after clearing the Vercel build cache if an old symbol or old env-check message is still reported.
 
 5. Run the development server:
    ```bash

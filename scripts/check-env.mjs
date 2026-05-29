@@ -6,6 +6,8 @@ const requiredVariables = [
   'GEMINI_API_KEY',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+]
+const recommendedVariables = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'NEXT_PUBLIC_APP_URL',
 ]
@@ -16,6 +18,7 @@ const placeholderValues = new Set([
   'your_supabase_service_role_key_here',
   'https://your-vercel-domain.vercel.app',
 ])
+
 function parseEnvFile(path) {
   if (!existsSync(path)) {
     return {}
@@ -37,7 +40,7 @@ function parseEnvFile(path) {
 
       const key = trimmedLine.slice(0, separatorIndex).trim()
       const rawValue = trimmedLine.slice(separatorIndex + 1).trim()
-      const value = rawValue.replace(/^['"]|['"]$/g, '')
+      const value = rawValue.replace(/^[ '"]|[ '"]$/g, '')
 
       values[key] = value
       return values
@@ -45,39 +48,68 @@ function parseEnvFile(path) {
 }
 
 const localEnv = parseEnvFile(envPath)
-const missingVariables = []
-const placeholderVariables = []
 
-for (const key of requiredVariables) {
+function getValue(key) {
   const value = localEnv[key] || process.env[key] || ''
-  const normalizedValue = value.trim()
 
-  if (!normalizedValue) {
-    missingVariables.push(key)
-    continue
+  if (key === 'NEXT_PUBLIC_APP_URL' && !value.trim() && process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
   }
 
-  if (placeholderValues.has(normalizedValue)) {
-    placeholderVariables.push(key)
+  return value
+}
+
+function collectStatus(keys) {
+  const missing = []
+  const placeholders = []
+
+  for (const key of keys) {
+    const normalizedValue = getValue(key).trim()
+
+    if (!normalizedValue) {
+      missing.push(key)
+      continue
+    }
+
+    if (placeholderValues.has(normalizedValue)) {
+      placeholders.push(key)
+    }
   }
+
+  return { missing, placeholders }
 }
 
-if (!existsSync(envPath) && missingVariables.length > 0) {
-  console.error('Missing .env.local file in the project root.')
-  console.error('Create .env.local from .env.example and add the required values:')
-  console.error(`  ${missingVariables.join('\n  ')}`)
-  process.exit(1)
+const requiredStatus = collectStatus(requiredVariables)
+const recommendedStatus = collectStatus(recommendedVariables)
+const failures = []
+
+if (requiredStatus.missing.length > 0) {
+  failures.push(`Missing required environment variable(s): ${requiredStatus.missing.join(', ')}`)
 }
 
-if (missingVariables.length > 0) {
-  console.error(`Missing required environment variable(s): ${missingVariables.join(', ')}`)
-  console.error('Update .env.local with the missing value(s), or export them in your shell.')
-  process.exit(1)
+if (requiredStatus.placeholders.length > 0) {
+  failures.push(`Placeholder required environment value(s) found for: ${requiredStatus.placeholders.join(', ')}`)
 }
 
-if (placeholderVariables.length > 0) {
-  console.error(`Placeholder environment value(s) found for: ${placeholderVariables.join(', ')}`)
-  console.error('Replace placeholder values in .env.local with real credentials.')
+if (!existsSync(envPath)) {
+  console.warn('No .env.local file found. This is OK on Vercel when variables are configured in Project Settings.')
+}
+
+if (recommendedStatus.missing.length > 0) {
+  console.warn(`Recommended environment variable(s) not set: ${recommendedStatus.missing.join(', ')}`)
+  console.warn('SUPABASE_SERVICE_ROLE_KEY enables server-side chat persistence; NEXT_PUBLIC_APP_URL can fall back to VERCEL_URL on Vercel.')
+}
+
+if (recommendedStatus.placeholders.length > 0) {
+  console.warn(`Placeholder recommended environment value(s) found for: ${recommendedStatus.placeholders.join(', ')}`)
+}
+
+if (failures.length > 0) {
+  console.error('Environment check failed:')
+  for (const failure of failures) {
+    console.error(`- ${failure}`)
+  }
+  console.error('Create .env.local from .env.example locally, or add these values in Vercel Project Settings → Environment Variables.')
   process.exit(1)
 }
 
