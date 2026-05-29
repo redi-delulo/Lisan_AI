@@ -66,7 +66,14 @@ To set up the project locally, follow these steps:
    ```
    The response should include `"geminiConfigured":true` and the active model. It never returns the secret API key.
 
-4. Run the development server:
+4. Run production checks before deploying:
+   ```bash
+   npm run typecheck
+   npm run build
+   ```
+   These checks catch TypeScript errors like undefined component types before Vercel builds the app.
+
+5. Run the development server:
    ```bash
    npm run dev
    # or
@@ -75,7 +82,7 @@ To set up the project locally, follow these steps:
    pnpm dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Usage
 
