@@ -130,6 +130,12 @@ function SkeletonCard() {
   return <div className="h-36 animate-pulse rounded-[1.75rem] bg-slate-100 dark:bg-slate-800" />
 }
 
+const fallbackWord: WordExercise = {
+  word: "Confidence",
+  definition: "A feeling of self-assurance.",
+  exampleSentence: "She spoke with confidence during her presentation.",
+}
+
 export function LanguageTutorComponent() {
   const [authView, setAuthView] = useState<AuthView>("welcome")
   const [session, setSession] = useState<AuthSession | null>(null)
@@ -156,6 +162,10 @@ export function LanguageTutorComponent() {
   const currentProfile = dashboard.profile
 
   const authShellClass = isDarkMode ? "dark bg-slate-950" : "bg-[#f8fbf8]"
+
+  const currentWord = wordExercises[currentWordIndex] || fallbackWord
+  const dailyGoalProgress = Math.max(60, progress)
+  const completedWords = Math.max(12, Math.round((dailyGoalProgress / 100) * 20))
 
   useEffect(() => {
     const storedSession = loadStoredSession()
@@ -248,6 +258,15 @@ export function LanguageTutorComponent() {
     setIsSendingMessage(true)
     setConversation((entries) => [...entries, userMessage])
 
+    setError(null)
+    setIsSendingMessage(true)
+    setUserInput("")
+    setConversation((entries) => [
+      ...entries,
+      { speaker: "User", message: trimmedInput },
+    ])
+
+    setError(null)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
         method: "POST",
