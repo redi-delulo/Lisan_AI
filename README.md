@@ -70,6 +70,7 @@ To set up the project locally, follow these steps:
 4. Run production checks before deploying:
    ```bash
    npm run lint
+   npm test
    npm run typecheck
    npm run build
    ```
