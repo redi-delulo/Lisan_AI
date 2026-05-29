@@ -7,10 +7,8 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookOpen, MessageCircle, PenTool, Zap, Send, User, Bot, ChevronRight, ChevronLeft } from "lucide-react"
+import { BookOpen, MessageCircle, PenTool, Zap, Send, ChevronRight, ChevronLeft } from "lucide-react"
 import { motion } from "framer-motion"
-// import { Badge } from "@/components/ui/badge"
-// import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const skillLevels = ["Beginner", "Intermediate", "Advanced"]
 
@@ -37,12 +35,9 @@ export function LanguageTutorComponent() {
   const [skillLevel, setSkillLevel] = useState<string>("Beginner")
   const [conversation, setConversation] = useState<ConversationEntry[]>([])
   const [userInput, setUserInput] = useState<string>("")
-  const [currentWord, setCurrentWord] = useState<string>("")
-  const [currentExercise, setCurrentExercise] = useState<string>("")
   const [progress, setProgress] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
   const conversationEndRef = useRef<HTMLDivElement>(null)
-  const [currentWordExercise, setCurrentWordExercise] = useState<WordExercise | null>(null)
   const [currentGrammarExercise, setCurrentGrammarExercise] = useState<GrammarExercise | null>(null)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [isAnswerCorrect, setIsAnswerCorrect] = useState<boolean | null>(null)
@@ -77,7 +72,7 @@ export function LanguageTutorComponent() {
         setWordError(data.error || 'Failed to fetch words')
         setWordExercises([])
       }
-    } catch (error) {
+    } catch {
       setWordError('Failed to fetch words')
       setWordExercises([])
     } finally {
@@ -102,7 +97,7 @@ export function LanguageTutorComponent() {
         setError(data.error || 'Failed to fetch exercise')
         setCurrentGrammarExercise(null)
       }
-    } catch (error) {
+    } catch {
       setError('Failed to fetch exercise')
       setCurrentGrammarExercise(null)
     }
@@ -116,7 +111,7 @@ export function LanguageTutorComponent() {
       const response = await fetch(`${API_URL}/language-tutor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'conversation', userInput }),
+        body: JSON.stringify({ action: 'conversation', userInput, skillLevel }),
       })
       const data = await response.json()
       if (response.ok) {
@@ -131,7 +126,7 @@ export function LanguageTutorComponent() {
       } else {
         setError(data.error || 'Failed to get AI response')
       }
-    } catch (error) {
+    } catch {
       setError('Failed to get AI response')
     }
   }
