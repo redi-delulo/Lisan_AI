@@ -9,6 +9,9 @@ const deprecatedModelReplacements: Record<string, string> = {
 const requestedGroqModel = process.env.GROQ_MODEL?.trim() || defaultGroqModel
 const groqModel = deprecatedModelReplacements[requestedGroqModel] || requestedGroqModel
 const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
 interface WordExercise {
   word: string;
@@ -20,6 +23,11 @@ interface GrammarExercise {
   question: string;
   options: string[];
   correctAnswer: string;
+}
+
+interface AuthUser {
+  id: string;
+  email?: string;
 }
 
 const allowedSkillLevels = ['Beginner', 'Intermediate', 'Advanced'] as const
@@ -103,14 +111,45 @@ function getPublicErrorMessage(error: unknown, fallbackMessage: string): string 
   return fallbackMessage
 }
 
-function createDefaultAIResponse(input: string, skillLevel: SkillLevel): string {
-  const levelHint = skillLevel === 'Beginner'
-    ? 'I will keep my English simple and clear.'
-    : skillLevel === 'Intermediate'
-      ? 'I will use natural English and explain tricky words when helpful.'
-      : 'I will use richer vocabulary and help you refine advanced expression.'
+async function verifySupabaseUser(req: NextApiRequest): Promise<AuthUser> {
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '').trim()
 
-  return `I had trouble connecting to the AI service, but we can still practice. You wrote: "${input}". ${levelHint} Try writing one more sentence about the same idea, and I will help you improve it.`
+  if (!token) {
+    throw new Error('Authentication is required.')
+  }
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment variables are not configured.')
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Invalid or expired session.')
+  }
+
+  return response.json() as Promise<AuthUser>
+}
+
+async function saveChatMessage(userId: string, role: 'user' | 'assistant', content: string) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return
+  }
+
+  await fetch(`${supabaseUrl}/rest/v1/chat_history`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ user_id: userId, role, content }),
+  })
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -121,12 +160,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       model: groqModel,
       requestedModel: requestedGroqModel,
       modelRemapped: requestedGroqModel !== groqModel,
+      supabaseConfigured: Boolean(supabaseUrl && supabaseAnonKey),
+      chatPersistenceConfigured: Boolean(supabaseUrl && supabaseServiceRoleKey),
     })
   }
 
   if (req.method === 'POST') {
     if (!groq) {
       return res.status(500).json({ error: 'Server is missing GROQ_API_KEY configuration' })
+    }
+
+    let authUser: AuthUser
+    try {
+      authUser = await verifySupabaseUser(req)
+    } catch (error) {
+      return res.status(401).json({ error: error instanceof Error ? error.message : 'Authentication is required.' })
     }
 
     const { action, skillLevel, userInput } = req.body
@@ -139,7 +187,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         try {
-          const aiResponse = await generateAIResponse(userInput.trim(), normalizedSkillLevel)
+          const trimmedInput = userInput.trim()
+          const aiResponse = await generateAIResponse(trimmedInput, normalizedSkillLevel)
+          await Promise.all([
+            saveChatMessage(authUser.id, 'user', trimmedInput),
+            saveChatMessage(authUser.id, 'assistant', aiResponse),
+          ])
           return res.status(200).json({ message: aiResponse })
         } catch (error) {
           console.error('Error generating AI response:', error)
@@ -186,15 +239,19 @@ async function generateAIResponse(input: string, skillLevel: SkillLevel): Promis
     })
 
     const message = completion.choices[0]?.message?.content?.trim()
-    return message || createDefaultAIResponse(input, skillLevel)
+    if (!message) {
+      throw new Error('The AI API returned an empty response.')
+    }
+
+    return message
   } catch (error) {
     if (isGroqConfigurationError(error)) {
       console.error('Configuration error calling Groq API:', error)
       throw error
     }
 
-    console.error('Error calling Groq API, using fallback response:', error)
-    return createDefaultAIResponse(input, skillLevel)
+    console.error('Error calling Groq API:', error)
+    throw error
   }
 }
 
@@ -303,44 +360,13 @@ async function generateGrammarExercise(skillLevel: SkillLevel): Promise<GrammarE
       return parsedResponse
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError)
-      // If parsing fails, create a level-specific default exercise
-      return createDefaultExercise(skillLevel)
+      throw new Error('Failed to parse AI grammar response')
     }
   } catch (error) {
     console.error('Error generating grammar exercise:', error)
     if (isGroqConfigurationError(error)) {
       throw error
     }
-    // Return a level-specific default exercise if generation fails
-    return createDefaultExercise(skillLevel)
-  }
-}
-
-function createDefaultExercise(skillLevel: SkillLevel): GrammarExercise {
-  switch (skillLevel) {
-    case 'Beginner':
-      return {
-        question: "Complete the sentence: I ___ a student.",
-        options: ["am", "is", "are"],
-        correctAnswer: "am"
-      }
-    case 'Intermediate':
-      return {
-        question: "Choose the correct past tense: Yesterday, I ___ to the store.",
-        options: ["go", "went", "gone"],
-        correctAnswer: "went"
-      }
-    case 'Advanced':
-      return {
-        question: "Select the correct conditional form: If I ___ about the exam, I would have studied more.",
-        options: ["knew", "had known", "would know"],
-        correctAnswer: "had known"
-      }
-    default:
-      return {
-        question: "Failed to generate a question. Please try again.",
-        options: ["Option 1", "Option 2", "Option 3"],
-        correctAnswer: "Option 1"
-      }
+    throw new Error('Failed to generate grammar exercise')
   }
 }

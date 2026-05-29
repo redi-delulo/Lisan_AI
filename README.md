@@ -53,9 +53,14 @@ To set up the project locally, follow these steps:
    | --- | --- | --- |
    | `GROQ_API_KEY` | Yes | Authenticates server-side requests to the Groq API. |
    | `GROQ_MODEL` | No | Overrides the Groq chat model used by the API route; defaults to `llama-3.3-70b-versatile`. Do not use the decommissioned `mixtral-8x7b-32768` model. |
+   | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL for real authentication and user data. |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key used with row-level security. |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only key used by the API route to persist AI chat history. |
    | `NEXT_PUBLIC_API_URL` | No | Overrides the client API base path; defaults to `/api`. |
 
    If your Vercel deployment still has `GROQ_MODEL=mixtral-8x7b-32768`, update it to `llama-3.3-70b-versatile` or delete the variable so the app can use the default model, then redeploy.
+
+   Run `lib/database.sql` in the Supabase SQL editor to create the production tables and row-level-security policies for `profiles`, `lessons`, `vocabulary`, `quizzes`, `chat_history`, `progress`, `streaks`, and `translations`.
 
    To verify a Vercel deployment is wired to the server-side Groq key, open this endpoint after redeploying:
    ```bash

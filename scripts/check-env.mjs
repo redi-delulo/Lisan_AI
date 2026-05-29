@@ -2,8 +2,18 @@ import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const envPath = resolve(process.cwd(), '.env.local')
-const requiredVariables = ['GROQ_API_KEY']
-const placeholderValues = new Set(['your_groq_api_key_here'])
+const requiredVariables = [
+  'GROQ_API_KEY',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+]
+const placeholderValues = new Set([
+  'your_groq_api_key_here',
+  'https://your-project.supabase.co',
+  'your_supabase_anon_key_here',
+  'your_supabase_service_role_key_here',
+])
 const deprecatedModelReplacements = new Map([
   ['mixtral-8x7b-32768', 'llama-3.3-70b-versatile'],
 ])
