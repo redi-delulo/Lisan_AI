@@ -242,7 +242,7 @@ export function LanguageTutorComponent() {
     const trimmedInput = userInput.trim()
     if (!trimmedInput || isSendingMessage) return
 
-    const pendingUserChatMessage: ChatMessage = {
+    const optimisticChatMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
       content: trimmedInput,
@@ -251,8 +251,20 @@ export function LanguageTutorComponent() {
 
     setUserInput("")
     setIsSendingMessage(true)
-    setConversation((entries) => [...entries, pendingUserChatMessage])
+    setConversation((entries) => [...entries, optimisticChatMessage])
 
+    const optimisticChatMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmedInput,
+      created_at: new Date().toISOString(),
+    }
+
+    setUserInput("")
+    setIsSendingMessage(true)
+    setConversation((entries) => [...entries, optimisticChatMessage])
+
+    setError(null)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
         method: "POST",
@@ -277,7 +289,7 @@ export function LanguageTutorComponent() {
       setNotice({ type: "success", message: "AI answer generated." })
       await refreshSessionAndData(session)
     } catch (error) {
-      setConversation((entries) => entries.filter((item) => item.id !== pendingUserChatMessage.id))
+      setConversation((entries) => entries.filter((item) => item.id !== optimisticChatMessage.id))
       setNotice({ type: "error", message: error instanceof Error ? error.message : "Unable to generate an answer." })
     } finally {
       setIsSendingMessage(false)

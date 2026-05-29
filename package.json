@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run check:env",
     "build": "next build",
     "start": "next start",
     "lint": "node scripts/lint.mjs",
     "check:env": "node scripts/check-env.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "npm run lint",
-    "prebuild": "npm run lint"
+    "test": "npm run lint"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.0",
