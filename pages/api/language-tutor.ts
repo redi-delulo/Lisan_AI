@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { Groq } from 'groq-sdk'
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-})
+const geminiApiKey = process.env.GEMINI_API_KEY?.trim()
+const geminiModel = process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
 
 interface WordExercise {
   word: string;
@@ -17,200 +18,231 @@ interface GrammarExercise {
   correctAnswer: string;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'POST') {
-    const { action, skillLevel, userInput } = req.body
+interface AuthUser {
+  id: string;
+  email?: string;
+}
 
-    switch (action) {
-      case 'conversation':
-        try {
-          const aiResponse = await generateAIResponse(userInput, skillLevel)
-          return res.status(200).json({ message: aiResponse })
-        } catch (error) {
-          console.error('Error generating AI response:', error)
-          return res.status(500).json({ error: 'Failed to generate AI response' })
-        }
-      case 'vocabulary':
-        try {
-          const wordExercises = await generateWordExercises(skillLevel)
-          return res.status(200).json(wordExercises)
-        } catch (error) {
-          console.error('Error generating word exercises:', error)
-          return res.status(500).json({ error: 'Failed to generate word exercises' })
-        }
-      case 'grammar':
-        try {
-          const grammarExercise = await generateGrammarExercise(skillLevel)
-          return res.status(200).json(grammarExercise)
-        } catch (error) {
-          console.error('Error generating grammar exercise:', error)
-          return res.status(500).json({ error: 'Failed to generate grammar exercise' })
-        }
-      default:
-        return res.status(400).json({ error: 'Invalid action' })
+const allowedSkillLevels = ['Beginner', 'Intermediate', 'Advanced'] as const
+type SkillLevel = (typeof allowedSkillLevels)[number]
+
+type RateLimitEntry = { count: number; resetAt: number }
+const rateLimitWindowMs = 60_000
+const maxRequestsPerWindow = 12
+const rateLimitStore = new Map<string, RateLimitEntry>()
+
+function normalizeSkillLevel(value: unknown): SkillLevel {
+  return allowedSkillLevels.includes(value as SkillLevel) ? (value as SkillLevel) : 'Beginner'
+}
+
+function getClientId(req: NextApiRequest, userId?: string) {
+  const forwardedFor = req.headers['x-forwarded-for']
+  const ip = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor?.split(',')[0]
+  return userId || ip || req.socket.remoteAddress || 'anonymous'
+}
+
+function checkRateLimit(clientId: string) {
+  const now = Date.now()
+  const current = rateLimitStore.get(clientId)
+
+  if (!current || current.resetAt < now) {
+    rateLimitStore.set(clientId, { count: 1, resetAt: now + rateLimitWindowMs })
+    return
+  }
+
+  if (current.count >= maxRequestsPerWindow) {
+    const seconds = Math.ceil((current.resetAt - now) / 1000)
+    throw new Error(`Too many AI requests. Please try again in ${seconds} seconds.`)
+  }
+
+  current.count += 1
+}
+
+function getPublicErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error) {
+    if (error.message.includes('API key')) {
+      return 'Gemini API authentication failed. Please check GEMINI_API_KEY in your environment variables.'
     }
-  } else {
-    res.setHeader('Allow', ['POST'])
-    res.status(405).end(`Method ${req.method} Not Allowed`)
+    return error.message
   }
+
+  return fallbackMessage
 }
 
-async function generateAIResponse(input: string, skillLevel: string): Promise<string> {
-  const prompt = `You are a helpful language tutor assisting a ${skillLevel} level student. 
-  Respond to the following input in a way that's appropriate for their skill level: "${input}"`
+async function verifySupabaseUser(req: NextApiRequest): Promise<AuthUser> {
+  const token = req.headers.authorization?.replace(/^Bearer\s+/i, '').trim()
 
-  try {
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
-      temperature: 0.7,
-      max_tokens: 150,
-    })
-
-    return completion.choices[0]?.message?.content || "I'm sorry, I couldn't generate a response."
-  } catch (error) {
-    console.error('Error calling Groq API:', error)
-    throw new Error('Failed to generate AI response')
+  if (!token) {
+    throw new Error('Authentication is required.')
   }
-}
 
-async function generateWordExercises(skillLevel: string, count: number = 5): Promise<WordExercise[]> {
-  const prompt = `Generate ${count} vocabulary word exercises for a ${skillLevel} level English learner. 
-  Choose random words that are appropriate for this level, but avoid common words like "hello" or "goodbye".
-  For each word, provide the word, its definition, and an example sentence. Format the response as a JSON array with the following structure:
-  [
-    {
-      "word": "example1",
-      "definition": "a short definition for example1",
-      "exampleSentence": "An example sentence using example1."
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment variables are not configured.')
+  }
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${token}`,
     },
-    {
-      "word": "example2",
-      "definition": "a short definition for example2",
-      "exampleSentence": "An example sentence using example2."
-    }
-  ]`
+  })
 
-  try {
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
-      temperature: 0.9,
-      max_tokens: 1000,
-    })
+  if (!response.ok) {
+    throw new Error('Invalid or expired session.')
+  }
 
-    const response = completion.choices[0]?.message?.content
-    console.log('Raw AI response for word exercises:', response)
+  return response.json() as Promise<AuthUser>
+}
 
-    if (!response) {
-      throw new Error('No response from AI')
-    }
+async function saveChatMessage(userId: string, role: 'user' | 'assistant', content: string) {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return
+  }
 
-    try {
-      const jsonMatch = response.match(/\[[\s\S]*\]/)
-      const jsonString = jsonMatch ? jsonMatch[0] : response
-      const parsedResponse = JSON.parse(jsonString) as WordExercise[]
+  const response = await fetch(`${supabaseUrl}/rest/v1/chat_history`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ user_id: userId, role, content }),
+  })
 
-      if (!Array.isArray(parsedResponse) || parsedResponse.length === 0) {
-        throw new Error('Invalid response structure')
-      }
-
-      return parsedResponse.filter(exercise => 
-        exercise.word && exercise.definition && exercise.exampleSentence
-      )
-    } catch (parseError) {
-      console.error('Error parsing AI response:', parseError)
-      throw new Error('Failed to parse AI response')
-    }
-  } catch (error) {
-    console.error('Error generating word exercises:', error)
-    throw new Error('Failed to generate word exercises')
+  if (!response.ok) {
+    console.error('Failed to persist chat message:', await response.text())
   }
 }
 
-async function generateGrammarExercise(skillLevel: string): Promise<GrammarExercise> {
-  let prompt = ''
-  if (skillLevel === 'Advanced') {
-    prompt = `Generate an advanced grammar exercise for an English learner. 
-    Focus on complex grammatical structures such as conditionals, passive voice, reported speech, or advanced tenses.
-    Provide a challenging question, three options, and the correct answer. Format the response as JSON with the following structure:
-    {
-      "question": "Complete the sentence with the correct form: If I ___ (know) about the party earlier, I would have attended.",
-      "options": ["had known", "knew", "would know"],
-      "correctAnswer": "had known"
-    }`
-  } else {
-    prompt = `Generate a ${skillLevel} level grammar exercise for an English learner. 
-    Provide a question appropriate for the skill level, three options, and the correct answer. Format the response as JSON with the following structure:
-    {
-      "question": "Complete the sentence: I ___ (am/is/are) learning English.",
-      "options": ["am", "is", "are"],
-      "correctAnswer": "am"
-    }`
+async function generateGeminiText(prompt: string, systemInstruction?: string): Promise<string> {
+  if (!geminiApiKey) {
+    throw new Error('Server is missing GEMINI_API_KEY configuration')
   }
 
-  try {
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'mixtral-8x7b-32768',
-      temperature: 0.7,
-      max_tokens: 300, // Increased max_tokens for more complex responses
-    })
-
-    const response = completion.choices[0]?.message?.content
-    console.log('Raw AI response for grammar exercise:', response)
-
-    if (!response) {
-      throw new Error('No response from AI')
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 700,
+        },
+      }),
     }
+  )
 
-    try {
-      // Try to extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
-      const jsonString = jsonMatch ? jsonMatch[0] : response
+  const data = await response.json().catch(() => null)
 
-      const parsedResponse = JSON.parse(jsonString) as GrammarExercise
-      if (!parsedResponse.question || !Array.isArray(parsedResponse.options) || !parsedResponse.correctAnswer) {
-        throw new Error('Invalid response structure')
-      }
-      return parsedResponse
-    } catch (parseError) {
-      console.error('Error parsing AI response:', parseError)
-      // If parsing fails, create a level-specific default exercise
-      return createDefaultExercise(skillLevel)
-    }
-  } catch (error) {
-    console.error('Error generating grammar exercise:', error)
-    // Return a level-specific default exercise if generation fails
-    return createDefaultExercise(skillLevel)
+  if (!response.ok) {
+    const message = data?.error?.message || 'Gemini API request failed'
+    throw new Error(message)
   }
+
+  const text = data?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || '').join('').trim()
+
+  if (!text) {
+    throw new Error('Gemini returned an empty response.')
+  }
+
+  return text
 }
 
-function createDefaultExercise(skillLevel: string): GrammarExercise {
-  switch (skillLevel) {
-    case 'Beginner':
-      return {
-        question: "Complete the sentence: I ___ a student.",
-        options: ["am", "is", "are"],
-        correctAnswer: "am"
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      ok: true,
+      geminiConfigured: Boolean(geminiApiKey),
+      model: geminiModel,
+      supabaseConfigured: Boolean(supabaseUrl && supabaseAnonKey),
+      chatPersistenceConfigured: Boolean(supabaseUrl && supabaseServiceRoleKey),
+    })
+  }
+
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['GET', 'POST'])
+    return res.status(405).end(`Method ${req.method} Not Allowed`)
+  }
+
+  let authUser: AuthUser
+  try {
+    authUser = await verifySupabaseUser(req)
+    checkRateLimit(getClientId(req, authUser.id))
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Authentication is required.'
+    return res.status(message.startsWith('Too many') ? 429 : 401).json({ error: message })
+  }
+
+  const { action, skillLevel, userInput } = req.body
+  const normalizedSkillLevel = normalizeSkillLevel(skillLevel)
+
+  switch (action) {
+    case 'conversation':
+      if (typeof userInput !== 'string' || !userInput.trim() || userInput.length > 2000) {
+        return res.status(400).json({ error: 'A message between 1 and 2000 characters is required.' })
       }
-    case 'Intermediate':
-      return {
-        question: "Choose the correct past tense: Yesterday, I ___ to the store.",
-        options: ["go", "went", "gone"],
-        correctAnswer: "went"
+
+      try {
+        const trimmedInput = userInput.trim()
+        const aiResponse = await generateAIResponse(trimmedInput, normalizedSkillLevel)
+        await Promise.all([
+          saveChatMessage(authUser.id, 'user', trimmedInput),
+          saveChatMessage(authUser.id, 'assistant', aiResponse),
+        ])
+        return res.status(200).json({ message: aiResponse })
+      } catch (error) {
+        console.error('Error generating AI response:', error)
+        return res.status(500).json({ error: getPublicErrorMessage(error, 'Failed to generate AI response') })
       }
-    case 'Advanced':
-      return {
-        question: "Select the correct conditional form: If I ___ about the exam, I would have studied more.",
-        options: ["knew", "had known", "would know"],
-        correctAnswer: "had known"
+    case 'vocabulary':
+      try {
+        const wordExercises = await generateWordExercises(normalizedSkillLevel)
+        return res.status(200).json(wordExercises)
+      } catch (error) {
+        console.error('Error generating word exercises:', error)
+        return res.status(500).json({ error: getPublicErrorMessage(error, 'Failed to generate word exercises') })
+      }
+    case 'grammar':
+      try {
+        const grammarExercise = await generateGrammarExercise(normalizedSkillLevel)
+        return res.status(200).json(grammarExercise)
+      } catch (error) {
+        console.error('Error generating grammar exercise:', error)
+        return res.status(500).json({ error: getPublicErrorMessage(error, 'Failed to generate grammar exercise') })
       }
     default:
-      return {
-        question: "Failed to generate a question. Please try again.",
-        options: ["Option 1", "Option 2", "Option 3"],
-        correctAnswer: "Option 1"
-      }
+      return res.status(400).json({ error: 'Invalid action' })
   }
+}
+
+async function generateAIResponse(input: string, skillLevel: SkillLevel): Promise<string> {
+  const systemPrompt = 'You are Lisan AI Tutor, a professional English and Arabic teacher. Teach clearly and simply. Correct grammar politely. Give examples. Support English and Arabic learning. Ask one practice question at the end. Keep answers helpful and beginner-friendly.'
+  return generateGeminiText(`Student level: ${skillLevel}\nStudent message: ${input}`, systemPrompt)
+}
+
+async function generateWordExercises(skillLevel: SkillLevel, count: number = 5): Promise<WordExercise[]> {
+  const response = await generateGeminiText(`Generate ${count} vocabulary word exercises for a ${skillLevel} English/Arabic learner. Return only valid JSON array items with word, definition, and exampleSentence.`)
+  const jsonMatch = response.match(/\[[\s\S]*\]/)
+  const parsedResponse = JSON.parse(jsonMatch ? jsonMatch[0] : response) as WordExercise[]
+
+  if (!Array.isArray(parsedResponse) || parsedResponse.length === 0) {
+    throw new Error('Invalid vocabulary response structure')
+  }
+
+  return parsedResponse.filter(exercise => exercise.word && exercise.definition && exercise.exampleSentence)
+}
+
+async function generateGrammarExercise(skillLevel: SkillLevel): Promise<GrammarExercise> {
+  const response = await generateGeminiText(`Generate one ${skillLevel} grammar quiz for an English/Arabic learner. Return only valid JSON with question, options array, and correctAnswer.`)
+  const jsonMatch = response.match(/\{[\s\S]*\}/)
+  const parsedResponse = JSON.parse(jsonMatch ? jsonMatch[0] : response) as GrammarExercise
+
+  if (!parsedResponse.question || !Array.isArray(parsedResponse.options) || !parsedResponse.correctAnswer) {
+    throw new Error('Invalid grammar response structure')
+  }
+
+  return parsedResponse
 }
