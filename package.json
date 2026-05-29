@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run check:env",
     "build": "next build",
     "start": "next start",
     "lint": "node scripts/lint.mjs",
