@@ -253,6 +253,19 @@ export function LanguageTutorComponent() {
     setIsSendingMessage(true)
     setConversation((entries) => [...entries, userMessage])
 
+    setUserInput("")
+    setIsSendingMessage(true)
+    setConversation((entries) => [...entries, userMessage])
+
+    setError(null)
+    setIsSendingMessage(true)
+    setUserInput("")
+    setConversation((entries) => [
+      ...entries,
+      { speaker: "User", message: trimmedInput },
+    ])
+
+    setError(null)
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
         method: "POST",
