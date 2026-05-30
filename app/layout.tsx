@@ -14,8 +14,11 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Lisan AI",
-  description: "AI-powered language learning with conversation, vocabulary, and grammar practice.",
+  title: "Lisan AI Tutor",
+  description: "Learn English and Arabic with AI practice, Amharic support, and live expert tutors.",
+  icons: {
+    icon: "/icons/favicon.png",
+  },
 };
 
 export default function RootLayout({
