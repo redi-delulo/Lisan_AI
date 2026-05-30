@@ -2,18 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  :root {
+    --navy: #082B5F;
+    --deep-navy: #031B3F;
+    --orange: #FF6B00;
+    --orange-light: #FF8A00;
+    --orange-dark: #FF4D00;
+    --green: #27B83F;
+    --green-dark: #159B2F;
+    --soft-blue: #F4F8FF;
+    --white: #FFFFFF;
+    --border: #E5ECF5;
+    --text-main: #082B5F;
+    --text-secondary: #5F6F89;
+    --text-muted: #7A8AA0;
+    --success-bg: #EAF8EE;
+    --warning-bg: #FFF4E5;
+    --error: #E53935;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --radius-pill: 999px;
+
+    --shadow-card: 0 8px 24px rgba(8, 43, 95, 0.08);
+    --shadow-button: 0 8px 18px rgba(255, 107, 0, 0.25);
+    --radius: 0.875rem;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-width: 320px;
+    overflow-x: hidden;
+    background: var(--white);
+    color: var(--text-main);
+    font-family: var(--font-geist-sans), Inter, Poppins, "Noto Sans Ethiopic", "Noto Sans Arabic", Arial, Helvetica, sans-serif;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    outline-color: var(--orange);
+  }
+
+  :focus-visible {
+    outline: 3px solid rgba(255, 107, 0, 0.45);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    min-height: 54px;
+    border: 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--orange-light), var(--orange-dark));
+    color: var(--white);
+    font-weight: 800;
+    box-shadow: var(--shadow-button);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #ff9b21, var(--orange-dark));
+  }
+
+  .btn-secondary {
+    min-height: 54px;
+    border: 1px solid #d7e0ec;
+    border-radius: 18px;
+    background: var(--white);
+    color: var(--navy);
+    font-weight: 800;
+    box-shadow: var(--shadow-card);
+  }
+
+  .green-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: var(--radius-pill);
+    background: var(--success-bg);
+    padding: 0.4rem 0.8rem;
+    color: var(--green-dark);
+    font-size: 0.875rem;
+    font-weight: 800;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .bg-white\/97 {
+    background-color: rgba(255, 255, 255, 0.97);
+  }
 }
 
-@layer base {
-  :root {
-    --radius: 0.5rem;
+@media (max-width: 640px) {
+  body {
+    font-size: 15px;
   }
 }
