@@ -406,114 +406,47 @@ function MiniFeature({ title, text, image, icon, tone = "navy" }: { title: strin
 
 function HomeScreen() {
   return (
-    <div className="home-page mx-auto w-full max-w-[1180px] pb-2">
-      <HomeHeader />
-
-      <section className="home-hero-card relative grid min-h-[560px] overflow-hidden rounded-[34px] border border-[var(--border)] bg-[var(--soft-blue)] px-6 pb-7 pt-8 shadow-[var(--shadow-card)] md:grid-cols-[0.9fr_1.1fr] md:items-center md:px-10 md:py-10 lg:min-h-[620px]">
-        <div className="relative z-10 max-w-xl">
-          <h1 className="home-hero-title text-[42px] font-black leading-[1.08] tracking-[-0.035em] text-[var(--navy)] sm:text-5xl lg:text-[64px]">
-            Learn English &<br />
-            <span className="text-[var(--orange)]">Arabic</span><br />
-            <span className="text-[var(--navy)]">with AI and Live Tutors</span>
-          </h1>
-          <p className="mt-5 max-w-[470px] text-[17px] font-semibold leading-8 text-[var(--text-secondary)]">
-            Smart AI practice, real conversations, and expert teachers — all in one place, anytime, anywhere.
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <LanguageChip flag="🇺🇸" label="English" />
-            <LanguageChip flag="العربية" label="Arabic" />
-            <LanguageChip flag="🇪🇹" label="አማርኛ Amharic" />
+    <div className="mx-auto max-w-6xl">
+      <TopHeader />
+      <section className="grid items-center gap-8 overflow-hidden rounded-[36px] bg-[var(--soft-blue)] p-5 md:grid-cols-[1fr_.95fr] md:p-10">
+        <div>
+          <h1 className="text-[34px] font-black leading-tight tracking-tight text-[var(--navy)] md:text-6xl">Learn English &<br /><span className="text-[var(--orange)]">Arabic</span><br /><span className="text-[var(--navy)]">with AI and Live Tutors</span></h1>
+          <p className="mt-5 max-w-xl text-[15px] font-semibold leading-7 text-[var(--text-secondary)]">Smart AI practice, real conversations, and expert teachers — all in one place, anytime, anywhere.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <LanguageChip label="🇺🇸 English" />
+            <LanguageChip label="العربية Arabic" />
+            <LanguageChip label="🇪🇹 አማርኛ Amharic" />
           </div>
-
-          <div className="mt-9 grid gap-4 sm:grid-cols-2">
-            <Button asChild className="btn-primary h-[60px] rounded-[18px] text-lg">
-              <Link href="/chat">Start Learning <ChevronRight className="ml-3 h-6 w-6" /></Link>
-            </Button>
-            <Button asChild variant="outline" className="btn-secondary h-[60px] rounded-[18px] border-[var(--navy)] text-lg shadow-none">
-              <Link href="/tutors">Book Tutor <CalendarDays className="ml-3 h-6 w-6" /></Link>
-            </Button>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <Button asChild className="btn-primary h-[58px] text-lg"><Link href="/dashboard">Start Learning <ChevronRight className="ml-2 h-6 w-6" /></Link></Button>
+            <Button asChild variant="outline" className="btn-secondary h-[58px] text-lg"><Link href="/booking">Book Tutor <CalendarDays className="ml-2 h-5 w-5" /></Link></Button>
           </div>
         </div>
-
-        <div className="home-hero-visual pointer-events-none relative mt-6 min-h-[300px] md:mt-0 md:min-h-[500px]">
-          <div className="absolute inset-0 rounded-[45%] bg-[#EAF2FF]" aria-hidden="true" />
-          <img
-            src={assets.hero}
-            alt="Student learning English and Arabic with an AI tutor on Lisan AI Tutor"
-            className="absolute bottom-[-28px] right-[-18px] z-10 h-full max-h-[540px] w-full object-contain object-bottom md:right-[-42px] lg:max-h-[610px]"
-          />
-          <div className="absolute right-6 top-7 z-20 rounded-2xl bg-[var(--green)] px-5 py-3 text-center text-lg font-black leading-tight text-white shadow-[0_12px_28px_rgba(39,184,63,0.25)] md:right-10 md:top-10">
-            እንኳን!<br /><span className="text-base">Marhaba!</span>
-            <span className="absolute -bottom-3 left-8 h-5 w-5 rotate-45 bg-[var(--green)]" aria-hidden="true" />
-          </div>
-          <div className="absolute left-1 top-16 z-20 w-[184px] rounded-[22px] bg-[var(--deep-navy)] p-4 text-white shadow-[0_14px_34px_rgba(3,27,63,0.22)] sm:left-4 md:left-0 md:top-28 lg:left-8">
-            <p className="text-base font-black">AI Tutor</p>
-            <div className="mt-3 flex items-center gap-3 rounded-2xl bg-white/10 p-3">
-              <img src={assets.robot} alt="AI robot tutor avatar" className="h-12 w-12 rounded-full bg-white p-1" />
-              <p className="text-xs font-bold leading-4">Let&apos;s practice together!</p>
-            </div>
-            <p className="mt-3 rounded-2xl bg-white/10 p-3 text-xs font-bold leading-4">How are you today?</p>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--green)]"><Mic className="h-3.5 w-3.5" /></span>
-              <span className="h-1 flex-1 rounded-full bg-white/20"><span className="block h-1 w-2/3 rounded-full bg-[var(--green)]" /></span>
-              <span className="flex items-end gap-0.5" aria-hidden="true">{[10, 16, 9, 22, 14, 18, 12].map((height) => <span key={height} className="w-1 rounded-full bg-[var(--green)]" style={{ height }} />)}</span>
-            </div>
-          </div>
-          <Sparkles className="absolute left-4 top-8 h-7 w-7 text-[#C9DAF5]" aria-hidden="true" />
-          <Sparkles className="absolute right-28 top-24 h-5 w-5 text-[#C9DAF5]" aria-hidden="true" />
+        <div className="relative">
+          <img src={assets.hero} alt="Smiling student using Lisan AI Tutor with books and AI chat" className="mx-auto w-full max-w-lg object-contain" />
         </div>
       </section>
-
-      <section className="home-feature-grid mt-7 grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <FeatureCard image={assets.robot} title="AI Tutor" text="Practice speaking, writing, grammar and vocabulary with our smart AI tutor available 24/7." highlight="24/7." />
-        <FeatureCard image={assets.badgeSpeaking} tone="orange" title="Live Teachers" text="Learn with certified English teachers through 1-on-1 live sessions tailored for you." />
-        <FeatureCard icon={<Languages className="h-10 w-10" />} tone="green" title="Amharic Support" text="Full support in Amharic to help you understand and learn with confidence." />
+      <section className="mt-8 grid gap-5 md:grid-cols-3">
+        <FeatureCard image={assets.robot} title="AI Tutor" text="Practice speaking, writing, grammar and vocabulary with our smart AI tutor available 24/7." />
+        <FeatureCard icon={<GraduationCap className="h-9 w-9" />} tone="orange" title="Live Teachers" text="Learn with certified English teachers through 1-on-1 live sessions tailored for you." />
+        <FeatureCard icon={<Languages className="h-9 w-9" />} tone="green" title="Amharic Support" text="Full support in Amharic to help you understand and learn with confidence." />
       </section>
-
-      <Card className="home-progress-card mt-7 grid items-center gap-5 rounded-[28px] p-5 sm:grid-cols-[1fr_auto_1fr_160px]">
-        <ProgressStat icon={<Flame className="h-12 w-12 fill-[var(--green)] text-[var(--green)]" />} value="7" label="Day Streak" caption="Keep it up!" />
-        <span className="hidden h-16 w-px bg-[var(--border)] sm:block" aria-hidden="true" />
-        <ProgressStat icon={<BookOpen className="h-10 w-10 text-[var(--navy)]" />} value="120" label="Lessons Completed" caption="Great progress!" />
-        <img src={assets.progress} alt="Progress achievement trophy" className="mx-auto h-28 w-40 object-contain" />
+      <Card className="mt-8 grid items-center gap-5 p-5 sm:grid-cols-[1fr_1fr_160px]">
+        <ProgressStat icon={<Flame className="h-10 w-10 fill-[var(--green)] text-[var(--green)]" />} value="7" label="Day Streak" caption="Keep it up!" />
+        <ProgressStat icon={<BookOpen className="h-9 w-9 text-[var(--navy)]" />} value="120" label="Lessons Completed" caption="Great progress!" />
+        <img src={assets.progress} alt="Progress achievement trophy" className="mx-auto h-28 w-36 object-contain" />
       </Card>
     </div>
   )
 }
 
-function HomeHeader() {
-  return (
-    <header className="home-header mb-6 flex items-center justify-between gap-4">
-      <Link href="/home" className="flex min-w-0 items-center gap-3" aria-label="Lisan AI Tutor home">
-        <img src={assets.logo} alt="Lisan AI Tutor logo" className="h-[78px] w-[78px] shrink-0 object-contain sm:h-[88px] sm:w-[88px]" />
-        <span className="min-w-0 leading-none">
-          <span className="block whitespace-nowrap text-[30px] font-black tracking-[-0.04em] text-[var(--navy)] sm:text-[42px]">
-            Lisan <span className="text-[var(--orange)]">AI</span> Tutor
-          </span>
-          <span className="mt-2 block whitespace-nowrap text-center text-[18px] font-black text-[var(--green-dark)] sm:text-[24px]">ሊሳን AI ቲውተር</span>
-        </span>
-      </Link>
-      <div className="flex shrink-0 items-center gap-3 sm:gap-5">
-        <button className="relative grid h-12 w-12 place-items-center rounded-2xl bg-white text-[var(--navy)] shadow-[var(--shadow-card)] sm:h-14 sm:w-14" aria-label="Notifications">
-          <Bell className="h-7 w-7" />
-          <span className="absolute -right-1 -top-1 grid h-7 w-7 place-items-center rounded-full bg-[var(--orange)] text-sm font-black text-white ring-4 ring-white">3</span>
-        </button>
-        <Link href="/profile" aria-label="Open profile" className="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-[var(--soft-blue)] text-3xl ring-4 ring-white shadow-[var(--shadow-card)] sm:h-[68px] sm:w-[68px]">
-          👩🏽
-        </Link>
-      </div>
-    </header>
-  )
+function LanguageChip({ label }: { label: string }) {
+  return <span className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm font-extrabold text-[var(--navy)] shadow-[var(--shadow-card)]">{label}</span>
 }
 
-function LanguageChip({ flag, label }: { flag: string; label: string }) {
-  return <span className="inline-flex min-h-14 items-center gap-3 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-base font-black text-[var(--navy)] shadow-[var(--shadow-card)]"><span className="text-2xl leading-none">{flag}</span><span>{label}</span></span>
-}
-
-function FeatureCard({ title, text, image, icon, tone = "navy", highlight }: { title: string; text: string; image?: string; icon?: ReactNode; tone?: "navy" | "orange" | "green"; highlight?: string }) {
+function FeatureCard({ title, text, image, icon, tone = "navy" }: { title: string; text: string; image?: string; icon?: ReactNode; tone?: "navy" | "orange" | "green" }) {
   const toneClass = tone === "orange" ? "bg-[var(--orange)]" : tone === "green" ? "bg-[var(--green)]" : "bg-[var(--navy)]"
-  const body = highlight && text.endsWith(highlight) ? text.slice(0, -highlight.length) : text
-  return <Card className="home-feature-card min-h-[250px] rounded-[26px] p-7"><span className={cn("mb-7 grid h-[74px] w-[74px] place-items-center rounded-2xl text-white shadow-lg", toneClass)}>{image ? <img src={image} alt={`${title} icon`} className="h-14 w-14 object-contain" /> : icon}</span><h3 className="text-2xl font-black text-[var(--navy)]">{title}</h3><p className="mt-4 text-[17px] font-semibold leading-8 text-[var(--text-secondary)]">{body}{highlight && <strong className="font-black text-[var(--green-dark)]">{highlight}</strong>}</p></Card>
+  return <Card className="min-h-64 p-7"><span className={cn("mb-7 grid h-16 w-16 place-items-center rounded-2xl text-white shadow-lg", toneClass)}>{image ? <img src={image} alt="AI robot tutor" className="h-14 w-14 object-contain" /> : icon}</span><h3 className="text-xl font-black text-[var(--navy)]">{title}</h3><p className="mt-4 text-[15px] font-semibold leading-7 text-[var(--text-secondary)]">{text}</p></Card>
 }
 
 function ProgressStat({ icon, value, label, caption }: { icon: ReactNode; value: string; label: string; caption: string }) {
