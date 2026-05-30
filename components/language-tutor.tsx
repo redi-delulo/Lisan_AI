@@ -319,7 +319,7 @@ export function LanguageTutorComponent() {
     setChatError(null)
     setIsSendingMessage(true)
     setUserInput("")
-    setConversation((entries) => [...entries, { speaker: "User", message: trimmedInput }])
+    setConversation((entries) => [...entries, { speaker: "User", message: trimmedInput, time: formatDeviceTime() }])
 
     try {
       const response = await fetch(`${API_URL}/language-tutor`, {
