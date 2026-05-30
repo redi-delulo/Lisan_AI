@@ -62,7 +62,6 @@ type AppRoute =
 type ConversationEntry = {
   speaker: "User" | "AI"
   message: string
-  time?: string
 }
 
 type ToastState = {
@@ -89,18 +88,6 @@ const assets = {
   badgeSpeaking: "/icons/badge-speaking.png",
   badgeStreak: "/icons/badge-streak.png",
   badgePremium: "/icons/badge-premium.png",
-}
-
-
-const chatAssets = {
-  robot: "/pub/illustrations/ai-robot-tutor.png",
-  aiChat: "/pub/illustrations/ai-chat-graphic.png",
-  badgeGrammar: "/pub/icons/badge-grammar.png",
-  badgeSpeaking: "/pub/icons/badge-speaking.png",
-}
-
-function formatDeviceTime(date = new Date()) {
-  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(date)
 }
 
 const routeLabels: Record<AppRoute, string> = {
@@ -247,7 +234,7 @@ function BottomNav({ activeRoute }: { activeRoute: AppRoute }) {
           const Icon = item.icon
           const active = activeRoute === item.route || (activeRoute === "dashboard" && item.route === "home")
           return (
-            <Link key={item.route} href={item.href} className={cn("grid min-h-14 place-items-center gap-0.5 rounded-2xl text-[12px] font-bold", active ? "text-[var(--orange-dark)]" : "text-[var(--text-secondary)]")}>
+            <Link key={item.route} href={routePath(item.route)} className={cn("grid min-h-14 place-items-center gap-0.5 rounded-2xl text-[12px] font-bold", active ? "text-[var(--orange-dark)]" : "text-[var(--text-secondary)]")}>
               <Icon className="h-6 w-6" />
               <span>{item.label}</span>
               <span className={cn("h-1 w-8 rounded-full", active ? "bg-[var(--orange)]" : "bg-transparent")} />
@@ -305,20 +292,8 @@ export function LanguageTutorComponent() {
   const [userInput, setUserInput] = useState("")
   const [isSendingMessage, setIsSendingMessage] = useState(false)
   const [chatError, setChatError] = useState<string | null>(null)
-  const [chatTimes, setChatTimes] = useState({ aiIntro: "", userIntro: "", aiPractice: "", userMistake: "", feedback: "" })
   const [toast, setToast] = useState<ToastState | null>(null)
   const conversationEndRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const now = new Date()
-    setChatTimes({
-      aiIntro: formatDeviceTime(new Date(now.getTime() - 2 * 60 * 1000)),
-      userIntro: formatDeviceTime(new Date(now.getTime() - 60 * 1000)),
-      aiPractice: formatDeviceTime(new Date(now.getTime() - 60 * 1000)),
-      userMistake: formatDeviceTime(now),
-      feedback: formatDeviceTime(now),
-    })
-  }, [])
 
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -354,9 +329,9 @@ export function LanguageTutorComponent() {
       })
       const data = await response.json().catch(() => ({ error: "Invalid API response" }))
       if (response.ok && typeof data?.response === "string") {
-        setConversation((entries) => [...entries, { speaker: "AI", message: data.response, time: formatDeviceTime() }])
+        setConversation((entries) => [...entries, { speaker: "AI", message: data.response }])
       } else if (response.ok && typeof data?.message === "string") {
-        setConversation((entries) => [...entries, { speaker: "AI", message: data.message, time: formatDeviceTime() }])
+        setConversation((entries) => [...entries, { speaker: "AI", message: data.message }])
       } else {
         setChatError(typeof data.error === "string" ? data.error : "AI Tutor is unavailable right now")
       }
@@ -372,7 +347,7 @@ export function LanguageTutorComponent() {
       case "signup": return <SignUpScreen onSubmit={signIn} />
       case "signin": return <SignInScreen onSubmit={signIn} />
       case "home": return <HomeScreen />
-      case "chat": return <ChatScreen conversation={conversation} userInput={userInput} setUserInput={setUserInput} onSubmit={handleConversationSubmit} isSending={isSendingMessage} error={chatError} endRef={conversationEndRef} showToast={showToast} times={chatTimes} />
+      case "chat": return <ChatScreen conversation={conversation} userInput={userInput} setUserInput={setUserInput} onSubmit={handleConversationSubmit} isSending={isSendingMessage} error={chatError} endRef={conversationEndRef} showToast={showToast} />
       case "lessons": return <LearnScreen />
       case "tutors": return <TutorsScreen />
       case "tutor-detail": return <TutorDetailScreen />
@@ -540,258 +515,55 @@ function SelectField({ label, name, options }: { label: string; name: string; op
   return <label className="block"><span className="mb-2 block text-sm font-black text-[var(--navy)]">{label}</span><select name={name} className="h-[54px] w-full rounded-2xl border border-[var(--border)] bg-white px-4 text-base font-semibold text-[var(--navy)] shadow-sm outline-none focus:ring-2 focus:ring-[var(--orange)]">{options.map((option) => <option key={option}>{option}</option>)}</select></label>
 }
 
-type ChatTimes = { aiIntro: string; userIntro: string; aiPractice: string; userMistake: string; feedback: string }
-
-function ChatScreen({ conversation, userInput, setUserInput, onSubmit, isSending, error, endRef, showToast, times }: { conversation: ConversationEntry[]; userInput: string; setUserInput: (value: string) => void; onSubmit: (event: FormEvent) => void; isSending: boolean; error: string | null; endRef: React.RefObject<HTMLDivElement>; showToast: (message?: string) => void; times: ChatTimes }) {
-  const [pronunciationMode, setPronunciationMode] = useState(false)
-  const [recordingState, setRecordingState] = useState<"idle" | "recording">("idle")
-  const [recordingSeconds, setRecordingSeconds] = useState(0)
-  const [recordingMessage, setRecordingMessage] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const mediaStreamRef = useRef<MediaStream | null>(null)
-  const recognitionRef = useRef<{ start?: () => void; stop?: () => void; abort?: () => void; onresult?: ((event: any) => void) | null; onerror?: ((event: any) => void) | null; onend?: (() => void) | null; continuous?: boolean; interimResults?: boolean; lang?: string } | null>(null)
-
-  useEffect(() => {
-    if (recordingState !== "recording") return undefined
-    const timer = window.setInterval(() => setRecordingSeconds((seconds) => seconds + 1), 1000)
-    return () => window.clearInterval(timer)
-  }, [recordingState])
-
-  useEffect(() => {
-    return () => {
-      mediaRecorderRef.current?.stop()
-      mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
-      recognitionRef.current?.abort?.()
-    }
-  }, [])
-
-  const recordingTime = `${Math.floor(recordingSeconds / 60)}:${String(recordingSeconds % 60).padStart(2, "0")}`
-
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop()
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
-    recognitionRef.current?.stop?.()
-    mediaRecorderRef.current = null
-    mediaStreamRef.current = null
-    recognitionRef.current = null
-    setRecordingState("idle")
-    setRecordingSeconds(0)
-    inputRef.current?.focus()
-  }
-
-  const startRecording = async () => {
-    setPronunciationMode(true)
-    setRecordingMessage("")
-    inputRef.current?.focus()
-
-    if (recordingState === "recording") {
-      stopRecording()
-      return
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setRecordingMessage("Microphone recording is not supported on this browser.")
-      return
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      mediaStreamRef.current = stream
-
-      if (typeof MediaRecorder !== "undefined") {
-        const recorder = new MediaRecorder(stream)
-        mediaRecorderRef.current = recorder
-        recorder.start()
-      }
-
-      const speechWindow = window as typeof window & { SpeechRecognition?: any; webkitSpeechRecognition?: any }
-      const SpeechRecognitionConstructor = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
-
-      if (SpeechRecognitionConstructor) {
-        const recognition = new SpeechRecognitionConstructor()
-        recognition.lang = "en-US"
-        recognition.continuous = false
-        recognition.interimResults = true
-        recognition.onresult = (event: any) => {
-          const transcript = Array.from(event.results || [])
-            .map((result: any) => result?.[0]?.transcript || "")
-            .join(" ")
-            .trim()
-          if (transcript) setUserInput(transcript)
-        }
-        recognition.onerror = () => setRecordingMessage("Speech recognition is not supported on this browser.")
-        recognition.onend = () => setRecordingState("idle")
-        recognitionRef.current = recognition
-        recognition.start()
-      } else {
-        setRecordingMessage("Speech recognition is not supported on this browser.")
-      }
-
-      setRecordingSeconds(0)
-      setRecordingState("recording")
-    } catch {
-      setRecordingMessage("Microphone permission was not granted. You can still type a message.")
-      setRecordingState("idle")
-    }
-  }
-
+function ChatScreen({ conversation, userInput, setUserInput, onSubmit, isSending, error, endRef, showToast }: { conversation: ConversationEntry[]; userInput: string; setUserInput: (value: string) => void; onSubmit: (event: FormEvent) => void; isSending: boolean; error: string | null; endRef: React.RefObject<HTMLDivElement>; showToast: (message?: string) => void }) {
   return (
-    <section className="chat-page" aria-label="AI Tutor chat page">
-      <header className="chat-topbar">
-        <button className="chat-icon-button" type="button" aria-label="Back" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-6 w-6" />
-        </button>
-        <h1>AI Tutor</h1>
-        <button className="chat-icon-button" type="button" aria-label="Settings">
-          <Settings className="h-6 w-6" />
-        </button>
-      </header>
-
-      <div className="chat-status-card">
-        <div className="chat-status-avatar-wrap">
-          <img src={chatAssets.robot} alt="AI Tutor robot avatar" className="chat-status-avatar" />
-          <span className="chat-online-dot" aria-label="Online" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2>AI Tutor</h2>
-          <p>Your personal English &amp; Arabic tutor</p>
-          <span className="chat-online-label"><span aria-hidden="true">●</span> Online</span>
-        </div>
-        <div className="chat-sparkles" aria-hidden="true">
-          <Sparkles className="sparkle sparkle-one" />
-          <Sparkles className="sparkle sparkle-two" />
-          <Sparkles className="sparkle sparkle-three" />
-        </div>
-      </div>
-
-      <div className="chat-thread" aria-live="polite">
-        <AiBubble time={times.aiIntro || formatDeviceTime()}>
-          <p>Hello! 👋<br />Let&apos;s practice together!<br />How are you today?</p>
-          <AudioWave />
-        </AiBubble>
-
-        <UserBubble text="I’m good! I want to practice speaking English and Arabic." time={times.userIntro || formatDeviceTime()} />
-
-        <AiBubble time={times.aiPractice || formatDeviceTime()}>
-          <p>Great! Let’s start with a sentence.<br />Please try to say this in English:</p>
-          <p className="chat-arabic" dir="rtl" lang="ar">أنا أتعلم اللغة الإنجليزية كل يوم.</p>
-          <p>(I learn English every day.)</p>
-        </AiBubble>
-
-        <UserBubble text="I learn English every days." time={times.userMistake || formatDeviceTime()} strong />
-
-        <FeedbackBubble time={times.feedback || formatDeviceTime()} />
-
-        {conversation.map((entry, index) => entry.speaker === "User" ? (
-          <UserBubble key={`${entry.speaker}-${index}`} text={entry.message} time={entry.time || formatDeviceTime()} />
-        ) : (
-          <AiBubble key={`${entry.speaker}-${index}`} time={entry.time || formatDeviceTime()}><p>{entry.message}</p></AiBubble>
-        ))}
-
-        {isSending && <AiBubble time={formatDeviceTime()}><p>Thinking...</p></AiBubble>}
-        {error && <div className="chat-error" role="alert">{error}</div>}
-        {recordingMessage && <div className="chat-recording-note" role="status">{recordingMessage}</div>}
+    <div className="mx-auto flex max-w-3xl flex-col">
+      <PageHeader title="AI Tutor" right={<Settings className="h-6 w-6" />} />
+      <Card className="mb-5 flex items-center gap-4 p-4">
+        <span className="relative grid h-20 w-20 place-items-center rounded-full bg-[var(--navy)]"><img src={assets.robot} alt="AI Tutor robot avatar" className="h-16 w-16 object-contain" /><span className="absolute bottom-2 right-1 h-4 w-4 rounded-full border-2 border-white bg-[var(--green)]" /></span>
+        <div><h2 className="text-2xl font-black text-[var(--navy)]">AI Tutor</h2><p className="font-semibold text-[var(--text-secondary)]">Your personal English & Arabic tutor</p><p className="font-extrabold text-[var(--green-dark)]">● Online</p></div>
+      </Card>
+      <div className="space-y-5 pb-40">
+        <AiBubble> <p>Hello! 👋<br />Let&apos;s practice together!<br />How are you today?</p><AudioWave /></AiBubble>
+        <UserBubble text="I’m good! I want to practice speaking English and Arabic." />
+        <AiBubble><p>Great! Let’s start with a sentence.<br />Please try to say this in English:</p><p className="mt-3 text-xl" dir="rtl">أنا أتعلم اللغة الإنجليزية كل يوم.</p><p>(I learn English every day.)</p></AiBubble>
+        <UserBubble text="I learn English every days." bold />
+        <AiBubble><GrammarFeedback /></AiBubble>
+        {conversation.map((entry, index) => entry.speaker === "User" ? <UserBubble key={index} text={entry.message} /> : <AiBubble key={index}><p>{entry.message}</p></AiBubble>)}
+        {isSending && <AiBubble><p>Thinking...</p></AiBubble>}
+        {error && <Card className="border-[var(--error)] text-sm font-bold text-[var(--error)]">{error}</Card>}
         <div ref={endRef} />
       </div>
-
-      <div className="chat-dock">
-        <div className="chat-quick-chips" aria-label="Quick actions">
-          <button type="button" className={cn(pronunciationMode && "is-active")} aria-pressed={pronunciationMode} onClick={startRecording}><span className="chip-icon chip-blue">▮▮▮</span>Pronunciation</button>
-          <button type="button" onClick={() => showToast("Improve your grammar")}><img src={chatAssets.badgeGrammar} alt="" />Grammar</button>
-          <button type="button" onClick={() => showToast("Translate and understand")}><span className="chip-icon chip-green"><Languages className="h-4 w-4" /></span>Translate</button>
-          <button type="button" onClick={() => showToast("More")}><MoreHorizontal className="h-5 w-5" />More</button>
+      <div className="fixed inset-x-0 bottom-[88px] z-30 mx-auto max-w-3xl px-4 lg:bottom-4">
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+          {[["Pronunciation", assets.badgeSpeaking], ["Grammar", assets.badgeGrammar], ["Translate", ""], ["More", ""]].map(([label, image]) => <button key={label} onClick={() => showToast(label)} className="flex min-h-12 shrink-0 items-center gap-2 rounded-2xl border border-[var(--border)] bg-white px-4 text-sm font-extrabold text-[var(--navy)] shadow-[var(--shadow-card)]">{image ? <img src={image} alt="" className="h-6 w-6" /> : <MoreHorizontal className="h-5 w-5" />}{label}</button>)}
         </div>
-
-        {recordingState === "recording" && (
-          <div className="chat-recording-bar" role="status">
-            <span className="recording-pulse" aria-hidden="true" />
-            Recording pronunciation • {recordingTime}
-            <button type="button" onClick={stopRecording}>Stop</button>
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} className="chat-input-card">
-          <button type="button" className={cn("chat-input-icon", recordingState === "recording" && "is-recording")} aria-label={recordingState === "recording" ? "Stop recording" : "Microphone"} onClick={startRecording}>
-            <Mic className="h-7 w-7" />
-          </button>
-          <label className="sr-only" htmlFor="ai-tutor-message">Type a message</label>
-          <input
-            ref={inputRef}
-            id="ai-tutor-message"
-            value={userInput}
-            onChange={(event) => setUserInput(event.target.value)}
-            placeholder="Type a message..."
-            className="chat-text-input"
-            autoComplete="off"
-          />
-          <button type="button" className={cn("chat-input-icon chat-record-icon", recordingState === "recording" && "is-recording")} aria-label={recordingState === "recording" ? "Stop voice input" : "Voice input"} onClick={startRecording}>
-            <Mic className="h-6 w-6" />
-          </button>
-          <button disabled={isSending} className="chat-send-button" aria-label="Send message">
-            <Send className="h-6 w-6 fill-white" />
-          </button>
+        <form onSubmit={onSubmit} className="flex items-center gap-3 rounded-[28px] border border-[var(--border)] bg-white p-3 shadow-[0_12px_38px_rgba(8,43,95,0.16)]">
+          <button type="button" className="grid h-12 w-12 place-items-center rounded-full bg-white text-[var(--navy)] shadow-sm" aria-label="Microphone"><Mic className="h-7 w-7" /></button>
+          <Input value={userInput} onChange={(event) => setUserInput(event.target.value)} placeholder="Type a message..." aria-label="Type a message" className="h-12 border-0 text-base font-semibold shadow-none focus-visible:ring-0" />
+          <button type="button" className="hidden h-12 w-12 place-items-center rounded-full bg-white text-[var(--orange)] shadow-sm sm:grid" aria-label="Voice record"><Mic className="h-6 w-6" /></button>
+          <button disabled={isSending} className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-[var(--orange-light)] to-[var(--orange-dark)] text-white shadow-[var(--shadow-button)]" aria-label="Send Message"><Send className="h-6 w-6 fill-white" /></button>
         </form>
       </div>
-    </section>
-  )
-}
-
-function AiBubble({ children, time }: { children: ReactNode; time: string }) {
-  return (
-    <div className="chat-row chat-row-ai">
-      <img src={chatAssets.robot} alt="AI Tutor avatar" className="chat-avatar chat-ai-avatar" />
-      <div className="chat-message-stack">
-        <div className="chat-bubble chat-bubble-ai">{children}</div>
-        <span className="chat-time chat-time-left">{time}</span>
-      </div>
     </div>
   )
 }
 
-function UserBubble({ text, time, strong = false }: { text: string; time: string; strong?: boolean }) {
-  return (
-    <div className="chat-row chat-row-user">
-      <div className="chat-message-stack chat-message-stack-user">
-        <div className={cn("chat-bubble chat-bubble-user", strong && "font-black")}>{text}</div>
-        <span className="chat-time chat-time-right">{time} <span className="chat-checks">✓✓</span></span>
-      </div>
-      <span className="chat-avatar chat-user-avatar" aria-label="User avatar">👩🏽</span>
-    </div>
-  )
+function AiBubble({ children }: { children: ReactNode }) {
+  return <div className="flex items-start gap-3"><img src={assets.robot} alt="AI Tutor avatar" className="h-14 w-14 rounded-full bg-[var(--navy)] p-1" /><div className="max-w-[82%] rounded-[24px] border border-[var(--border)] bg-white p-4 text-lg font-semibold leading-relaxed text-[var(--navy)] shadow-[var(--shadow-card)]">{children}<span className="mt-2 block text-right text-xs font-bold text-[var(--text-secondary)]">9:43 AM</span></div></div>
+}
+
+function UserBubble({ text, bold = false }: { text: string; bold?: boolean }) {
+  return <div className="flex items-start justify-end gap-3"><div className={cn("max-w-[78%] rounded-[24px] bg-[var(--success-bg)] p-4 text-lg leading-relaxed text-[var(--navy)] shadow-[var(--shadow-card)]", bold ? "font-black" : "font-semibold")}>{text}<span className="mt-1 block text-right text-xs font-bold text-[var(--text-secondary)]">9:42 AM ✓✓</span></div><span className="grid h-14 w-14 place-items-center rounded-full bg-[var(--success-bg)] text-3xl">👩🏽</span></div>
 }
 
 function AudioWave() {
-  return (
-    <div className="chat-audio" role="img" aria-label="Voice message, duration 0:04">
-      <span className="chat-play"><Play className="h-4 w-4 fill-white" /></span>
-      <span className="chat-waveform" aria-hidden="true">
-        {Array.from({ length: 30 }).map((_, i) => <span key={i} style={{ height: `${8 + ((i * 9) % 24)}px` }} />)}
-      </span>
-      <span className="chat-audio-time">0:04</span>
-    </div>
-  )
+  return <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[var(--navy)] px-4 py-3 text-white"><span className="grid h-9 w-9 place-items-center rounded-full bg-white/10"><Play className="h-5 w-5 fill-white" /></span><span className="flex flex-1 items-center gap-1">{Array.from({ length: 28 }).map((_, i) => <span key={i} className="w-1 rounded-full bg-[var(--green)]" style={{ height: `${10 + ((i * 7) % 22)}px` }} />)}</span><span className="text-sm font-bold">0:04</span></div>
 }
 
-function FeedbackBubble({ time }: { time: string }) {
-  return (
-    <div className="chat-row chat-row-ai chat-row-feedback">
-      <img src={chatAssets.robot} alt="AI Tutor avatar" className="chat-avatar chat-ai-avatar" />
-      <div className="chat-feedback-card">
-        <div className="chat-feedback-head">
-          <h3>✨ Grammar Feedback</h3>
-          <span>Good Try!</span>
-          <button type="button" aria-label="Collapse grammar feedback"><ChevronRight className="h-4 w-4 -rotate-90" /></button>
-        </div>
-        <p><strong>Correction:</strong> <em>I learn English every day.</em></p>
-        <p><strong>Explanation:</strong> Use “day” (singular) because it refers to each day.</p>
-        <p><strong>💡 Tip:</strong> Remember to use singular with “every” + time.</p>
-        <time>{time}</time>
-      </div>
-    </div>
-  )
+function GrammarFeedback() {
+  return <div className="border-l-4 border-[var(--orange)] pl-4"><div className="mb-3 flex items-center justify-between gap-3"><h3 className="text-xl font-black text-[var(--orange-dark)]">✨ Grammar Feedback</h3><span className="rounded-full bg-[var(--success-bg)] px-4 py-2 text-sm font-black text-[var(--green-dark)]">Good Try!</span></div><p>Correction: <strong className="text-[var(--green-dark)]">I learn English every day.</strong></p><p className="mt-2">Explanation: Use “day” singular because it refers to each day.</p><p className="mt-3">💡 Tip: Remember to use singular with “every” + time.</p></div>
 }
-
 
 function TutorsScreen() {
   return (
