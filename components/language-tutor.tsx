@@ -109,12 +109,12 @@ const routeLabels: Record<AppRoute, string> = {
   "change-password": "Change Password",
 }
 
-const bottomNavItems: Array<{ route: AppRoute; label: string; icon: typeof Home }> = [
-  { route: "home", label: "Home", icon: Home },
-  { route: "lessons", label: "Learn", icon: BookOpen },
-  { route: "tutors", label: "Tutors", icon: Users },
-  { route: "chat", label: "Chat", icon: MessageCircle },
-  { route: "profile", label: "Profile", icon: User },
+const bottomNavItems: Array<{ route: AppRoute; href: string; label: string; icon: typeof Home }> = [
+  { route: "home", href: "/", label: "Home", icon: Home },
+  { route: "lessons", href: "/learn", label: "Learn", icon: BookOpen },
+  { route: "tutors", href: "/tutors", label: "Tutors", icon: Users },
+  { route: "chat", href: "/ai-tutor", label: "Chat", icon: MessageCircle },
+  { route: "profile", href: "/profile", label: "Profile", icon: User },
 ]
 
 const desktopNavItems: Array<{ route: AppRoute; label: string }> = [
@@ -170,6 +170,8 @@ const tutors = [
 
 function getRouteFromPath(pathname: string): AppRoute {
   const value = pathname.replace(/^\//, "") || "welcome"
+  if (value === "ai-tutor") return "chat"
+  if (value === "learn") return "lessons"
   return Object.prototype.hasOwnProperty.call(routeLabels, value) ? (value as AppRoute) : "welcome"
 }
 
