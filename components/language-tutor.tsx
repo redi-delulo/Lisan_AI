@@ -10,11 +10,9 @@ import {
   Bot,
   CalendarDays,
   Camera,
-  Crown,
   Check,
   ChevronRight,
   Flame,
-  FileText,
   GraduationCap,
   Home,
   Languages,
@@ -100,8 +98,6 @@ const routeLabels: Record<AppRoute, string> = {
   signin: "Sign In",
   home: "Home",
   chat: "AI Tutor",
-  "ai-tutor": "AI Tutor",
-  learn: "Learn",
   lessons: "Learn",
   tutors: "Find Tutors",
   "tutor-detail": "Tutor Profile",
@@ -117,7 +113,7 @@ const routeLabels: Record<AppRoute, string> = {
 
 const bottomNavItems: Array<{ route: AppRoute; label: string; icon: typeof Home }> = [
   { route: "home", label: "Home", icon: Home },
-  { route: "learn", label: "Learn", icon: BookOpen },
+  { route: "lessons", label: "Learn", icon: BookOpen },
   { route: "tutors", label: "Tutors", icon: Users },
   { route: "chat", label: "Chat", icon: MessageCircle },
   { route: "profile", label: "Profile", icon: User },
@@ -236,7 +232,7 @@ function BottomNav({ activeRoute }: { activeRoute: AppRoute }) {
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
         {bottomNavItems.map((item) => {
           const Icon = item.icon
-          const active = activeRoute === item.route || (activeRoute === "lessons" && item.route === "learn") || (activeRoute === "dashboard" && item.route === "home")
+          const active = activeRoute === item.route || (activeRoute === "dashboard" && item.route === "home")
           return (
             <Link key={item.route} href={routePath(item.route)} className={cn("grid min-h-14 place-items-center gap-0.5 rounded-2xl text-[12px] font-bold", active ? "text-[var(--orange-dark)]" : "text-[var(--text-secondary)]")}>
               <Icon className="h-6 w-6" />
@@ -351,9 +347,7 @@ export function LanguageTutorComponent() {
       case "signup": return <SignUpScreen onSubmit={signIn} />
       case "signin": return <SignInScreen onSubmit={signIn} />
       case "home": return <HomeScreen />
-      case "chat":
-      case "ai-tutor": return <ChatScreen conversation={conversation} userInput={userInput} setUserInput={setUserInput} onSubmit={handleConversationSubmit} isSending={isSendingMessage} error={chatError} endRef={conversationEndRef} showToast={showToast} />
-      case "learn":
+      case "chat": return <ChatScreen conversation={conversation} userInput={userInput} setUserInput={setUserInput} onSubmit={handleConversationSubmit} isSending={isSendingMessage} error={chatError} endRef={conversationEndRef} showToast={showToast} />
       case "lessons": return <LearnScreen />
       case "tutors": return <TutorsScreen />
       case "tutor-detail": return <TutorDetailScreen />
@@ -610,143 +604,9 @@ function StatMini({ icon: Icon, value, label }: { icon: typeof BookOpen; value: 
   return <Card className="p-4"><Icon className="h-7 w-7 text-[var(--orange)]" /><strong className="mt-3 block text-3xl font-black text-[var(--navy)]">{value}</strong><span className="text-sm font-bold text-[var(--text-secondary)]">{label}</span></Card>
 }
 
-
-function LearnTopHeader() {
-  return (
-    <header className="flex items-center justify-between gap-3 bg-white py-2 sm:py-4">
-      <AppLogo />
-      <div className="flex shrink-0 items-center gap-3">
-        <button className="relative grid h-12 w-12 place-items-center rounded-2xl bg-white text-[var(--navy)] shadow-[var(--shadow-card)]" aria-label="Notifications">
-          <Bell className="h-7 w-7" />
-          <span className="absolute right-1.5 top-1 grid h-5 w-5 place-items-center rounded-full bg-[var(--orange)] text-[10px] font-black text-white">3</span>
-        </button>
-        <Link href="/profile" aria-label="Open profile" className="grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-[var(--soft-blue)] ring-4 ring-white shadow-[var(--shadow-card)]">
-          <span className="text-3xl">👩🏽</span>
-        </Link>
-      </div>
-    </header>
-  )
-}
-
 function LearnScreen() {
-  const moduleCards = [
-    { title: "Speaking Coach", subtitle: "Practice speaking with confidence", lessons: "15 Lessons", progress: 75, accent: "var(--purple)", tint: "#F0EBFF", image: assets.speaking, alt: "Speaking coach module icon" },
-    { title: "Grammar Coach", subtitle: "Learn grammar step by step", lessons: "18 Lessons", progress: 40, accent: "var(--green)", tint: "#EAF8EE", image: assets.grammar, alt: "Grammar coach module icon" },
-    { title: "Vocabulary Builder", subtitle: "Expand your vocabulary", lessons: "22 Lessons", progress: 30, accent: "var(--orange)", tint: "#FFF4E5", image: assets.vocabulary, alt: "Vocabulary builder module icon" },
-    { title: "Listening Lab", subtitle: "Improve your listening skills", lessons: "16 Lessons", progress: 25, accent: "var(--blue)", tint: "#EAF3FF", image: assets.listening, alt: "Listening lab module icon" },
-    { title: "Translation Practice", subtitle: "Translate and understand", lessons: "14 Lessons", progress: 20, accent: "var(--pink)", tint: "#FDEAF1", icon: Languages },
-    { title: "Writing Practice", subtitle: "Improve your writing skills", lessons: "12 Lessons", progress: 10, accent: "var(--teal)", tint: "#E8FAF8", icon: FileText },
-  ]
-
-  const badges = [
-    { title: "7 Day Streak", icon: assets.badgeStreak, alt: "7 Day Streak badge" },
-    { title: "Speaking Star", icon: assets.badgeSpeaking, alt: "Speaking Star badge" },
-    { title: "Grammar Pro", icon: assets.badgeGrammar, alt: "Grammar Pro badge" },
-    { title: "Premium", icon: assets.badgePremium, alt: "Premium badge" },
-    { title: "Quick Learner", icon: assets.badgeGrammar, alt: "Quick Learner badge" },
-  ]
-
-  return (
-    <div className="mx-auto w-full max-w-[1180px] pb-2">
-      <LearnTopHeader />
-
-      <section className="mt-5">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h1 className="text-[25px] font-black leading-tight text-[var(--navy)] sm:text-3xl">Continue Learning</h1>
-          <Link href="/learn" className="flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-black text-[var(--orange-dark)] sm:text-base">
-            See All <ChevronRight className="h-5 w-5" />
-          </Link>
-        </div>
-
-        <Link href="/ai-tutor" className="block focus-visible:rounded-[28px]" aria-label="Continue English Conversation lesson">
-          <div className="grid min-h-[190px] overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--soft-blue)] p-5 shadow-[var(--shadow-card)] sm:min-h-[210px] sm:grid-cols-[1fr_240px] sm:p-7 lg:grid-cols-[1fr_300px]">
-            <div className="grid grid-cols-[76px_1fr] gap-4 sm:grid-cols-[92px_1fr]">
-              <span className="grid h-[70px] w-[70px] place-items-center rounded-[22px] bg-[var(--green)] text-white shadow-lg shadow-green-200 sm:h-20 sm:w-20">
-                <MessageCircle className="h-9 w-9 fill-white/10" aria-hidden="true" />
-              </span>
-              <div className="min-w-0 pt-2">
-                <h2 className="text-lg font-black text-[var(--navy)] sm:text-2xl">English Conversation</h2>
-                <p className="mt-2 text-sm font-bold text-[var(--text-secondary)] sm:text-base">Daily Conversation Practice</p>
-                <div className="mt-6 flex items-center gap-4">
-                  <div className="h-3 flex-1 overflow-hidden rounded-full bg-[#E8EDF6]" role="progressbar" aria-label="English Conversation progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={60}>
-                    <div className="h-full w-[60%] rounded-full bg-gradient-to-r from-[var(--purple)] to-[var(--blue)]" />
-                  </div>
-                  <span className="text-xl font-black text-[var(--navy)]">60%</span>
-                </div>
-                <p className="mt-4 text-sm font-bold text-[var(--text-muted)]">12 of 20 lessons completed</p>
-              </div>
-            </div>
-            <div className="relative mt-4 flex justify-end sm:mt-0 sm:items-center">
-              <div className="absolute right-0 top-1/2 h-36 w-36 -translate-y-1/2 rounded-full bg-white/70 sm:h-48 sm:w-48" />
-              <img src={assets.robot} alt="AI robot tutor reading a lesson" className="relative ml-auto h-32 w-36 object-contain sm:h-44 sm:w-52 lg:h-52 lg:w-60" />
-            </div>
-          </div>
-        </Link>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="mb-4 text-[25px] font-black text-[var(--navy)] sm:text-3xl">Learning Modules</h2>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {moduleCards.map((module) => (
-            <Link key={module.title} href="/ai-tutor" className="group grid min-h-[104px] grid-cols-[78px_1fr_auto] items-center gap-4 rounded-[24px] border border-[var(--border)] bg-white p-3 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg sm:min-h-[116px] sm:grid-cols-[88px_1fr_150px_auto] sm:p-4" aria-label={`${module.title}, ${module.progress}% complete`}>
-              <span className="grid h-[70px] w-[70px] place-items-center rounded-[20px] sm:h-20 sm:w-20" style={{ backgroundColor: module.tint }}>
-                {module.image ? <img src={module.image} alt={module.alt} className="h-12 w-12 object-contain sm:h-14 sm:w-14" /> : module.icon ? <module.icon className="h-9 w-9" style={{ color: module.accent }} aria-hidden="true" /> : null}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-base font-black text-[var(--navy)] sm:text-lg">{module.title}</span>
-                <span className="mt-1 block truncate text-[13px] font-semibold text-[var(--text-secondary)] sm:text-sm">{module.subtitle}</span>
-                <span className="mt-2 block text-xs font-bold text-[var(--text-muted)] sm:text-sm">{module.lessons}</span>
-              </span>
-              <span className="w-[112px] justify-self-end max-sm:hidden">
-                <span className="block text-right text-xl font-black" style={{ color: module.accent }}>{module.progress}%</span>
-                <span className="mt-3 block h-2 overflow-hidden rounded-full bg-[#E8EDF6]" role="progressbar" aria-label={`${module.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={module.progress}>
-                  <span className="block h-full rounded-full" style={{ width: `${module.progress}%`, backgroundColor: module.accent }} />
-                </span>
-              </span>
-              <span className="grid justify-items-end gap-3 sm:hidden">
-                <span className="text-xl font-black" style={{ color: module.accent }}>{module.progress}%</span>
-                <span className="h-2 w-16 overflow-hidden rounded-full bg-[#E8EDF6]" role="progressbar" aria-label={`${module.title} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={module.progress}>
-                  <span className="block h-full rounded-full" style={{ width: `${module.progress}%`, backgroundColor: module.accent }} />
-                </span>
-              </span>
-              <ChevronRight className="h-6 w-6 text-[var(--text-muted)] transition group-hover:text-[var(--navy)]" aria-hidden="true" />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-5 overflow-hidden rounded-[26px] border border-[#FFE6CC] bg-gradient-to-r from-[#FFF7EE] to-[#FFECD7] p-5 shadow-[var(--shadow-card)] sm:p-6">
-        <div className="grid items-center gap-4 sm:grid-cols-[72px_1fr_auto_130px]">
-          <span className="grid h-16 w-16 place-items-center rounded-2xl bg-white text-[var(--orange)] shadow-[var(--shadow-card)]">
-            <Crown className="h-10 w-10 fill-[var(--orange-light)]" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-xl font-black text-[var(--orange-dark)]">Go Premium</h2>
-            <p className="mt-1 max-w-md text-sm font-bold leading-6 text-[var(--navy)]">Unlock all lessons, advanced practice, and premium features.</p>
-          </div>
-          <Button asChild className="btn-primary h-14 min-w-40 text-base"><Link href="/pricing">Upgrade Now</Link></Button>
-          <img src={assets.premium} alt="Premium upgrade coins and stars" className="hidden h-24 w-28 object-contain sm:block" />
-        </div>
-      </section>
-
-      <section className="mt-7">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <h2 className="text-[25px] font-black text-[var(--navy)] sm:text-3xl">Your Badges</h2>
-          <Link href="/learn" className="flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-black text-[var(--orange-dark)] sm:text-base">
-            View All <ChevronRight className="h-5 w-5" />
-          </Link>
-        </div>
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0">
-          {badges.map((badge) => (
-            <div key={badge.title} className="grid min-w-[116px] place-items-center rounded-[22px] border border-[var(--border)] bg-white p-4 text-center shadow-[var(--shadow-card)] sm:min-w-0">
-              <img src={badge.icon} alt={badge.alt} className="h-16 w-16 object-contain" />
-              <h3 className="mt-3 text-xs font-black text-[var(--navy)] sm:text-sm">{badge.title}</h3>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  )
+  const items = [["Practice with AI", assets.robot], ["Speak with confidence", assets.speaking], ["Improve your grammar", assets.grammar], ["Build your vocabulary", assets.vocabulary], ["Practice pronunciation", assets.listening], ["Translate and understand", assets.aiChat]]
+  return <div className="mx-auto max-w-6xl"><TopHeader /><h1 className="text-3xl font-black">Continue Learning</h1><div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{items.map(([title, image]) => <Card key={title}><img src={image} alt={`${title} illustration`} className="h-40 w-full object-contain" /><h2 className="mt-4 text-xl font-black text-[var(--navy)]">{title}</h2><p className="mt-2 font-semibold text-[var(--text-secondary)]">Short mobile-friendly lessons with AI support and teacher guidance.</p><Button asChild className="btn-primary mt-5 h-12 w-full"><Link href="/chat">Start Learning</Link></Button></Card>)}</div></div>
 }
 
 function ProfileScreen({ showToast }: { showToast: (message?: string) => void }) {
