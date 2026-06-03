@@ -47,6 +47,8 @@ type AppRoute =
   | "signin"
   | "home"
   | "chat"
+  | "ai-tutor"
+  | "learn"
   | "lessons"
   | "tutors"
   | "tutor-detail"
